@@ -29,6 +29,14 @@ commands
             audio, about half the size). New or changed files are encoded and checked,
             copies whose source is gone are deleted, files FLAC can't hold losslessly are
             copied as they are. Doesn't touch rekordbox.
+  silence   silent gaps inside the matching tracks: stretches of --min-gap seconds or more
+            (default 2) at least 30 dB under the track's typical level, between where the
+            music first gets going and where it last is (quiet intros and endings don't
+            count). Each file is decoded with ffmpeg, --jobs at a time (default 8); results
+            are kept in --cache, so a re-run scans only new or changed files. --list prints
+            every track with a gap, --csv=PATH writes every gap. --cues --apply puts a memory
+            cue (comment "gap N s") at each dropout-like gap at least 20 s from either end;
+            otherwise it doesn't touch rekordbox.
 
 filters (any mix): --ext=wav,aif,aiff  --under=DIR  --playlist=NAME (a folder includes
 everything below it)  --missing
@@ -55,6 +63,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from uuid import uuid4
 
 from pyrekordbox import MasterDatabase
 from pyrekordbox.masterdb import models
@@ -298,6 +307,233 @@ def cmd_verify(lib, a):
     print(f"  {len(rows):,} files checked{' and decoded' if a.decode else ''}: {len(problems)} problems")
     for c, why in problems[:200]:
         print(f"    {why}: {c.FolderPath}")
+
+
+# ---------------------------------------------------------------- silent gaps
+
+SCAN_VERSION = 1                # bump when the detector changes: cached results are then redone
+SR, HOP, WIN = 8000, 800, 4     # mono 8 kHz; a level every 0.1 s, each the power over 0.4 s
+REL, ABS = 30.0, -35.0          # quiet: REL dB under the track's typical level, and under ABS dBFS
+GOING = 10.0                    # the music has got going once it's within GOING dB of typical
+BLIP, QUIET_BLIP = 0.3, 2.0     # sound a gap can hold: any blip this short, or a quiet one (< typical - 15 dB)
+KEEP_GAP = 1.0                  # gaps this long are cached; --min-gap picks the ones reported
+ABRUPT, DIGITAL = 20.0, 0.5     # dropout-like: the level falls ABRUPT dB into the gap, or that share is digital silence
+LONG = 15 * 60                  # longer files are mixes / tapes, where gaps between tracks are normal
+EDGE = 20.0                     # --cues leaves out gaps this close to either end (split edges, stops, endings)
+ACAPELLA = re.compile(r"\ba\s?(c+ap+|p+)el+as?\b", re.I)   # acapella, a cappella, "A Pella"
+
+
+def track_levels(ffmpeg, path):
+    """dB every HOP samples (power over WIN hops) and which hops are digital silence."""
+    import numpy as np
+    r = subprocess.run([ffmpeg, "-nostdin", "-v", "error", "-i", path, "-map", "0:a:0", "-ac", "1",
+                        "-ar", str(SR), "-f", "s16le", "-"], capture_output=True)
+    if r.returncode and not r.stdout:
+        raise RuntimeError((r.stderr.decode(errors="replace").strip().splitlines() or ["decode failed"])[0][:150])
+    x = np.frombuffer(r.stdout, dtype=np.int16)
+    n = len(x) // HOP
+    if n < 10 * SR // HOP:                       # under 10 s
+        return None, None
+    b = x[:n * HOP].reshape(n, HOP).astype(np.float32) / 32768
+    power = np.convolve((b * b).mean(axis=1), np.ones(WIN) / WIN, mode="same")
+    return 10 * np.log10(np.maximum(power, 1e-14)), np.abs(b).max(axis=1) <= 1 / 32768
+
+
+def find_gaps(db, zero):
+    """(typical level, [gaps of KEEP_GAP s or more]) - quiet stretches inside the music."""
+    import numpy as np
+    loud = db[db > -60]
+    if len(loud) < 20:
+        return None, []
+    ref = float(np.median(loud))
+    going = np.flatnonzero(db > ref - GOING)
+    if not len(going):
+        return round(ref, 1), []
+    first, last = int(going[0]), int(going[-1])
+    quiet = (db < ref - REL) & (db < ABS)
+    hop_s, out, i = HOP / SR, [], first
+    while i <= last:
+        if not quiet[i]:
+            i += 1
+            continue
+        k = i
+        while True:                              # the gap goes on over blips of sound
+            while k <= last and quiet[k]:
+                k += 1
+            n = k
+            while n <= last and not quiet[n]:
+                n += 1
+            if n <= last and ((n - k) * hop_s <= BLIP
+                              or ((n - k) * hop_s <= QUIET_BLIP and db[k:n].max() < ref - 15)):
+                k = n
+                continue
+            break
+        if (k - i) * hop_s >= KEEP_GAP:
+            before = float(np.median(db[max(first, i - 5):i])) if i > first else ref
+            out.append({"at": round(i * hop_s, 1), "dur": round((k - i) * hop_s, 1),
+                        "level": round(float(np.median(db[i:k])), 1),
+                        "drop": round(before - float(np.median(db[i:i + 5])), 1),
+                        "digital": round(float(zero[i:k].mean()), 2)})
+        i = k
+    return round(ref, 1), out
+
+
+def dropout_like(g):
+    return g["digital"] >= DIGITAL or g["drop"] >= ABRUPT
+
+
+def mmss(s):
+    return f"{int(s // 60)}:{s % 60:04.1f}"
+
+
+def cmd_silence(lib, a):
+    if not a.ffmpeg:
+        raise SystemExit("silence needs ffmpeg (--ffmpeg=PATH, or ffmpeg on PATH)")
+    if not a.cache:
+        raise SystemExit("silence needs --cache=PATH (where results are kept between runs)")
+    rows = [c for c in lib.select(a) if lib.disk_size(c) is not None]
+    cache = {}
+    if os.path.exists(a.cache):
+        with open(a.cache, encoding="utf-8") as fh:
+            cache = json.load(fh)
+    files = cache.get("files", {}) if cache.get("version") == SCAN_VERSION else {}
+
+    def save():
+        os.makedirs(os.path.dirname(os.path.abspath(a.cache)), exist_ok=True)
+        with open(a.cache + ".tmp", "w", encoding="utf-8") as fh:
+            json.dump({"version": SCAN_VERSION, "files": files}, fh)
+        os.replace(a.cache + ".tmp", a.cache)
+
+    stamp = {}
+    for c in rows:
+        st = os.stat(native(c.FolderPath))
+        stamp[c.ID] = [st.st_size, int(st.st_mtime)]
+    todo = [c for c in rows if files.get(key(c.FolderPath), {}).get("stamp") != stamp[c.ID]]
+    print(f"  {len(rows):,} tracks: {len(rows) - len(todo):,} scanned before, {len(todo):,} to scan "
+          f"({sum(c.Length or 0 for c in todo) / 3600:,.0f} h of audio, {a.jobs} at a time)", flush=True)
+
+    def scan(c):
+        try:
+            db, zero = track_levels(a.ffmpeg, native(c.FolderPath))
+            if db is None:
+                return c, {"short": True}
+            ref, gaps = find_gaps(db, zero)
+            return c, {"ref": ref, "gaps": gaps, "secs": round(len(db) * HOP / SR)}
+        except Exception as e:
+            return c, {"error": str(e)[:200]}
+
+    try:
+        with ThreadPoolExecutor(max_workers=a.jobs) as pool:
+            for i, (c, res) in enumerate(pool.map(scan, todo), 1):
+                files[key(c.FolderPath)] = {"stamp": stamp[c.ID], **res}
+                if i % 500 == 0 or i == len(todo):
+                    print(f"    {i:,}/{len(todo):,} scanned", flush=True)
+                    save()
+    finally:
+        save()
+
+    def kind(c, r):
+        if (r.get("secs") or c.Length or 0) > LONG:
+            return "long"
+        return "acapella" if ACAPELLA.search(f"{os.path.basename(c.FolderPath)} {c.Title or ''}") else "track"
+
+    found, errors, short = [], [], 0
+    for c in rows:
+        r = files.get(key(c.FolderPath), {})
+        if "error" in r:
+            errors.append((c, r["error"]))
+        short += bool(r.get("short"))
+        gaps = [g for g in r.get("gaps", []) if g["dur"] >= a.min_gap]
+        if gaps:
+            found.append((c, r, gaps, kind(c, r)))
+    tracks = [f for f in found if f[3] == "track"]
+    drop = [f for f in tracks if any(dropout_like(g) for g in f[2])]
+    n = len(rows) - len(errors) - short
+    pct = lambda k, m: f"{k / m:.1%}" if m else "-"
+    print(f"\n  silent gaps of {a.min_gap:g} s or more inside the music ({REL:g} dB under the track's typical level):")
+    print(f"    {len(tracks):,} of {n:,} tracks ({pct(len(tracks), n)}): {len(drop):,} dropout-like (an abrupt drop, "
+          f"or digital silence), {len(tracks) - len(drop):,} quiet passages only")
+    others = {k: sum(1 for f in found if f[3] == k) for k in ("long", "acapella")}
+    print(f"    not counted: {others['long']:,} mix-length files (over {LONG // 60} min) and "
+          f"{others['acapella']:,} acapellas with gaps")
+    if errors or short:
+        print(f"    {len(errors):,} couldn't be decoded, {short:,} are under 10 s")
+
+    by = defaultdict(lambda: [0, 0, 0])
+    for c in rows:
+        r = files.get(key(c.FolderPath), {})
+        if "error" not in r and not r.get("short"):
+            by[(lib.area(c.FolderPath), fmt(c.FolderPath))][0] += 1
+    for c, _, gaps, _ in tracks:
+        g = by[(lib.area(c.FolderPath), fmt(c.FolderPath))]
+        g[1 if any(dropout_like(x) for x in gaps) else 2] += 1
+    print(f"\n  {'where':44} {'format':6} {'tracks':>7} {'dropout-like':>13} {'quiet only':>11}")
+    for (area, f), (m, d, q) in sorted(by.items(), key=lambda x: -x[1][0]):
+        print(f"  {area[:44]:44} {f:6} {m:7,} {d:7,} {pct(d, m):>5} {q:6,} {pct(q, m):>5}")
+
+    worst = sorted(((g, c) for c, _, gaps, _ in drop for g in gaps if dropout_like(g)), key=lambda x: -x[0]["dur"])
+    if worst:
+        print(f"\n  longest dropout-like gaps:")
+        for g, c in worst[:25]:
+            print(f"    {mmss(g['at']):>8} {g['dur']:5.1f} s {g['level']:6.0f} dB {g['digital']:4.0%} digital  "
+                  f"{os.path.basename(c.FolderPath)[:70]}")
+    if a.list:
+        print()
+        for c, r, gaps, k in sorted(found, key=lambda f: key(f[0].FolderPath)):
+            print(f"  [{k}] {c.FolderPath}  (typical {r['ref']:.0f} dB)")
+            for g in gaps:
+                print(f"      {mmss(g['at']):>8} {g['dur']:5.1f} s {g['level']:6.0f} dB  drop {g['drop']:3.0f} dB "
+                      f"{g['digital']:4.0%} digital  {'dropout-like' if dropout_like(g) else 'quiet'}")
+    if a.csv:
+        with open(a.csv, "w", newline="", encoding="utf-8-sig") as fh:
+            w = csv.writer(fh)
+            w.writerow(["path", "artist", "title", "kind", "gap", "at", "at_s", "duration_s", "level_db",
+                        "typical_db", "drop_db", "digital_share", "length_s", "bitrate", "where", "playlists"])
+            for c, r, gaps, k in found:
+                for g in gaps:
+                    w.writerow([native(c.FolderPath), c.Artist.Name if c.Artist else "", c.Title, k,
+                                "dropout-like" if dropout_like(g) else "quiet", mmss(g["at"]), g["at"], g["dur"],
+                                g["level"], r["ref"], g["drop"], g["digital"], r.get("secs"), c.BitRate,
+                                lib.area(c.FolderPath), " | ".join(lib.playlist_names(c))])
+        print(f"\n  wrote {a.csv}")
+    if a.cues:
+        add_gap_cues(lib, a, tracks)
+
+
+def add_gap_cues(lib, a, found):
+    """A memory cue ("gap N s") at each dropout-like gap at least EDGE s from either end."""
+    plan = []
+    for c, r, gaps, _ in found:
+        secs = r.get("secs") or c.Length or 0
+        have = [q.InMsec for q in lib.db.query(models.DjmdCue).filter_by(ContentID=c.ID, Kind=0)
+                if not q.rb_local_deleted]
+        for g in gaps:
+            ms = int(g["at"] * 1000)
+            if (dropout_like(g) and g["at"] >= EDGE and secs - g["at"] - g["dur"] >= EDGE
+                    and not any(abs(ms - h) < 1000 for h in have)):
+                plan.append((c, ms, g))
+    print(f"\n  memory cues: {len(plan)} to add on {len({c.ID for c, *_ in plan})} tracks (dropout-like gaps "
+          f"at least {EDGE:g} s from either end; none where a memory cue already sits)")
+    if not plan:
+        return
+    if not a.apply:
+        print("  report only - add --apply (rekordbox closed) to add them")
+        return
+    if get_rekordbox_pid():
+        raise SystemExit("rekordbox is running - close it and run this again")
+    dest = backup(lib, a, "silence", [])
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from rbdb import Ids
+    ids, now = Ids(lib.db), datetime.datetime.now()
+    for c, ms, g in plan:
+        lib.db.add(models.DjmdCue.create(
+            ID=ids.new(models.DjmdCue), ContentID=c.ID, InMsec=ms, InFrame=ms * 150 // 1000, InMpegFrame=0,
+            InMpegAbs=0, OutMsec=-1, OutFrame=0, OutMpegFrame=0, OutMpegAbs=0, Kind=0, Color=-1,
+            ColorTableIndex=0, ActiveLoop=0, Comment=f"gap {g['dur']:.0f}s", BeatLoopSize=0, CueMicrosec=0,
+            ContentUUID=c.UUID, UUID=str(uuid4()), rb_data_status=0, rb_local_data_status=0, rb_local_deleted=0,
+            rb_local_synced=0, created_at=now, updated_at=now))
+    lib.db.commit()
+    print(f"  added {len(plan)} memory cues; master.db as it was before: {dest}")
 
 
 # ---------------------------------------------------------------- writes
@@ -712,7 +948,8 @@ def cmd_undo(lib, a):
 def main(argv):
     ap = argparse.ArgumentParser(prog="mixarchive files", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=("status", "audit", "verify", "relocate", "move", "flac", "undo", "flaccopy"))
+    ap.add_argument("command", choices=("status", "audit", "verify", "relocate", "move", "flac", "undo", "flaccopy",
+                                        "silence"))
     ap.add_argument("journal", nargs="?", help="undo: the journal.csv to reverse")
     ap.add_argument("--ext")
     ap.add_argument("--under")
@@ -735,13 +972,20 @@ def main(argv):
     ap.add_argument("--ffprobe")
     ap.add_argument("--mirror")
     ap.add_argument("--area", action="append", default=[], help="NAME=DIR")
+    ap.add_argument("--min-gap", type=float, default=2.0, help="silence: shortest gap reported, in seconds")
+    ap.add_argument("--jobs", type=int, default=8, help="silence: files decoded at a time")
+    ap.add_argument("--cache", help="silence: where results are kept between runs")
+    ap.add_argument("--cues", action="store_true", help="silence: a memory cue at each dropout-like gap (--apply)")
     a = ap.parse_args(argv)
+    for tool in ("ffmpeg", "ffprobe"):      # a full path, or a name on PATH
+        path = getattr(a, tool)
+        setattr(a, tool, path if path and os.path.isfile(path) else shutil.which(path) if path else None)
     if a.command == "flaccopy":             # files on disk only, no database
         return cmd_flaccopy(a)
     areas = [tuple(x.split("=", 1)) for x in a.area]
     lib = Library(a.db, areas, a.mirror)
     {"status": cmd_status, "audit": cmd_audit, "verify": cmd_verify, "relocate": cmd_relocate,
-     "move": cmd_move, "flac": cmd_flac, "undo": cmd_undo}[a.command](lib, a)
+     "move": cmd_move, "flac": cmd_flac, "undo": cmd_undo, "silence": cmd_silence}[a.command](lib, a)
     lib.db.close()
 
 
