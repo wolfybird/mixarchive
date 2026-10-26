@@ -1,0 +1,21 @@
+[project]
+name = "mixarchive"
+version = "0.1.0"
+description = "Archive YouTube channels and long mixes as tagged tracks, and sync them into rekordbox for CDJ/XDJ"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = ["yt-dlp[default]", "deno", "mutagen", "pillow"]
+
+[project.scripts]
+mixarchive = "mixarchive.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["mixarchive"]
+
+[tool.setuptools.package-data]
+mixarchive = ["gui.html"]

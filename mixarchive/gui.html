@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mixarchive</title>
+<style>
+:root {
+  --bg: #f6f6f4; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e2e1dc;
+  --accent: #2f5fd0; --accent-ink: #ffffff; --good: #1d7a46; --warn: #a15c00; --bad: #b3261e;
+  --chip: #eeede8; --code: #15171a; --code-ink: #d8dee4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141414; --panel: #1d1d1d; --ink: #ecebe6; --muted: #9a9993; --line: #2f2f2d;
+    --accent: #7aa2ff; --accent-ink: #0d1424; --good: #5cc98a; --warn: #f0b05a; --bad: #ff8a80;
+    --chip: #2a2a28; --code: #0b0c0d; --code-ink: #d8dee4;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; padding-bottom: 46vh; }
+header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: var(--panel);
+  border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+header h1 { font-size: 17px; margin: 0 8px 0 0; letter-spacing: .2px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px;
+  background: var(--chip); font-size: 12.5px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot.good { background: var(--good); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+.spacer { flex: 1; }
+main { max-width: 1180px; margin: 0 auto; padding: 16px 20px; }
+.flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+  display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.step .n { font-size: 12px; color: var(--muted); }
+.step b { font-size: 14px; }
+.step p { margin: 0; color: var(--muted); font-size: 12.5px; flex: 1; }
+.step .state { font-size: 12.5px; }
+nav { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 14px; flex-wrap: wrap; }
+nav button { border: 0; background: none; padding: 9px 14px; font: inherit; color: var(--muted);
+  border-bottom: 2px solid transparent; cursor: pointer; }
+nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.panel { display: none; } .panel.on { display: block; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.card h2 { font-size: 15px; margin: 0 0 10px; }
+.card h3 { font-size: 13.5px; margin: 14px 0 8px; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+button.btn { font: inherit; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); cursor: pointer; white-space: nowrap; }
+button.btn:hover:not(:disabled) { border-color: var(--accent); }
+button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.btn.danger { border-color: var(--bad); color: var(--bad); }
+button.btn.armed { background: var(--bad); color: #fff; border-color: var(--bad); }
+button.btn:disabled { opacity: .45; cursor: not-allowed; }
+button.btn.small { padding: 3px 8px; font-size: 12.5px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.kind { font-size: 11.5px; padding: 1px 7px; border-radius: 99px; background: var(--chip); color: var(--muted); }
+.muted { color: var(--muted); } .small { font-size: 12.5px; }
+.links { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.actions { white-space: nowrap; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+input[type=text], textarea, select { font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; width: 100%; }
+textarea { min-height: 96px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.checks { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+.checks label { display: inline-flex; gap: 5px; align-items: center; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.stat { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.stat .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .l { font-size: 12px; color: var(--muted); }
+.note { background: var(--chip); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin: 10px 0; }
+.note.warn { border-left: 3px solid var(--warn); }
+.preview li { margin: 2px 0; font-size: 12.5px; } .preview { margin: 6px 0 0; padding-left: 18px; }
+ol.howto { margin: 6px 0; padding-left: 20px; } ol.howto li { margin: 3px 0; }
+kbd { font: 12px ui-monospace, Consolas, monospace; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+#console { position: fixed; left: 0; right: 0; bottom: 0; height: 42vh; background: var(--code); color: var(--code-ink);
+  display: flex; flex-direction: column; z-index: 6; border-top: 1px solid #000; }
+#console.min { height: 40px; }
+#console .bar { display: flex; gap: 10px; align-items: center; padding: 7px 14px; background: rgba(255,255,255,.04);
+  font-size: 12.5px; }
+#console .bar code { color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+#console pre { margin: 0; padding: 8px 14px 14px; overflow: auto; flex: 1; font: 12px/1.45 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap; word-break: break-word; }
+#console .btn { background: transparent; color: var(--code-ink); border-color: #3a3d42; }
+#toast { position: fixed; top: 60px; right: 20px; max-width: min(420px, calc(100vw - 32px)); z-index: 7;
+  background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--bad); border-radius: 8px;
+  padding: 10px 14px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+@media (max-width: 860px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .flow { grid-template-columns: 1fr; } main { padding: 12px 16px; } header { padding: 10px 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>mixarchive</h1>
+  <span class="pill" id="rbPill"><span class="dot"></span><span>rekordbox …</span></span>
+  <span class="pill" id="jobPill"><span class="dot"></span><span>idle</span></span>
+  <span class="spacer"></span>
+  <span class="muted small" id="libRoot"></span>
+</header>
+
+<main>
+  <section class="flow" aria-label="Workflow">
+    <div class="step"><span class="n">1</span><b>Add sources</b><p>Channels, playlists or single videos from YouTube.</p>
+      <button class="btn" data-goto="add">Add links</button></div>
+    <div class="step"><span class="n">2</span><b>Download &amp; split</b><p>New uploads are fetched, split, normalized and tagged.</p>
+      <button class="btn" id="stepUpdate">Update all</button></div>
+    <div class="step"><span class="n">3</span><b>Into rekordbox</b><p>New tracks + playlists go into rekordbox's database. rekordbox must be closed.</p>
+      <span class="state small" id="stepSyncState"></span>
+      <button class="btn" id="stepSync">Sync now</button></div>
+    <div class="step"><span class="n">4</span><b>Analyze</b><p>In rekordbox: <i>mixarchive › Not analyzed yet</i>, <kbd>Ctrl+A</kbd>, right-click › Analyze Track.</p>
+      <span class="state small" id="stepAnalyzeState"></span>
+      <button class="btn" data-open="rekordbox">Open rekordbox</button></div>
+    <div class="step"><span class="n">5</span><b>USB stick</b><p>In rekordbox, sync the mixarchive playlists you want to the stick.</p>
+      <button class="btn" data-goto="rekordbox">Playlist sizes</button></div>
+  </section>
+
+  <nav role="tablist">
+    <button role="tab" data-tab="collections" aria-selected="true">Collections</button>
+    <button role="tab" data-tab="add" aria-selected="false">Add sources</button>
+    <button role="tab" data-tab="rekordbox" aria-selected="false">rekordbox</button>
+    <button role="tab" data-tab="files" aria-selected="false">Library files</button>
+  </nav>
+
+  <section class="panel on" id="tab-collections">
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn primary" data-run='["update","--no-rbsync"]'>Update all</button>
+        <button class="btn" data-run='["update"]' data-needs-closed>Update all + sync to rekordbox</button>
+        <button class="btn" id="refreshOverview">Refresh</button>
+        <span class="muted small">Update = new uploads → download → tracklists → art → split, for every collection.</span>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Collection</th><th>Sources</th><th class="r" title="downloaded / found">Mixes</th><th class="r" title="exported (dups and skips aside)">Singles</th>
+          <th class="r">In playlist</th><th class="r">GB</th><th></th></tr></thead>
+        <tbody id="collections"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-add">
+    <div class="card">
+      <h2>Add YouTube links</h2>
+      <label class="field">One per line: a channel (youtube.com/@name), a playlist (…/playlist?list=…) or a video (youtu.be/…)
+        <textarea id="urls" spellcheck="false" placeholder="https://www.youtube.com/@somelabel&#10;https://youtu.be/abcdefghijk"></textarea></label>
+      <ul class="preview" id="urlPreview"></ul>
+      <h3>Where they go</h3>
+      <div class="checks">
+        <label><input type="radio" name="dest" value="new" checked> Channels / playlists become new collections; videos go to <i>YouTube picks</i></label>
+        <label><input type="radio" name="dest" value="to"> Everything into</label>
+        <select id="addTo" style="width:auto"></select>
+      </div>
+      <div id="newFields">
+        <h3>New collection <span class="muted small">(one channel or playlist at a time when you fill these in)</span></h3>
+        <div class="grid">
+          <label class="field">Label (makes it a label collection, rekordbox Label)<input type="text" id="addLabel" placeholder="e.g. Some Label"></label>
+          <label class="field">Genre<input type="text" id="addGenre" placeholder="e.g. House"></label>
+          <label class="field">Name (optional)<input type="text" id="addName" placeholder="from the channel / playlist"></label>
+        </div>
+        <div class="checks" style="margin-top:8px">
+          <label><input type="checkbox" id="addNoYear"> Archive label: no upload years for undated singles</label>
+        </div>
+      </div>
+      <div class="checks" style="margin-top:12px">
+        <label><input type="checkbox" id="addRun" checked> Download and split right away</label>
+      </div>
+      <div class="toolbar" style="margin-top:12px"><button class="btn primary" id="addBtn">Add</button>
+        <span class="muted small">Short videos become single tracks, long ones mixes with a tracklist. Edit <i>tracks.csv</i> / tracklists in the collection folder, then Update.</span></div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-rekordbox">
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn" data-run='["rbsync","--dry-run"]'>Preview sync</button>
+        <button class="btn primary" data-run='["rbsync"]' data-needs-closed>Sync to rekordbox</button>
+        <button class="btn" data-open="rekordbox">Open rekordbox</button>
+        <button class="btn" id="refreshRb">Refresh</button>
+        <span class="muted small" id="rbAt"></span>
+      </div>
+      <div class="stats" id="rbStats"></div>
+      <div class="note" id="rbHowto">
+        <b>Analyze:</b> rekordbox doesn't analyze tracks added this way by itself.
+        <ol class="howto"><li>Open <i>mixarchive › Not analyzed yet</i>.</li><li><kbd>Ctrl+A</kbd>, right-click › <b>Analyze Track</b>. Leave rekordbox open until it's done.</li>
+        <li>Close rekordbox and Sync again: the list then only holds what's left.</li></ol>
+        <b>USB:</b> sync the playlists you want in rekordbox's device view. Sizes below are the files alone; rekordbox adds about 0.7 MB of analysis + artwork per track on the stick.
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>mixarchive playlist</th><th class="r">Tracks</th><th class="r">GB</th><th class="r">Not analyzed</th></tr></thead>
+        <tbody id="rbPlaylists"></tbody>
+      </table></div>
+
+      <h3>Merge playlists</h3>
+      <p class="muted small">Moves one playlist's tracks into another, then deletes it (its tracks stay in the collection and in play histories).
+        Copies of the same recording are found by ear: the best stays (WAV first) and the others' cues move onto it. The USB stick isn't changed.</p>
+      <div class="grid">
+        <label class="field">Merge this playlist<input type="text" id="mgFrom" list="rbLists" placeholder="Some Label (old)"></label>
+        <label class="field">into<input type="text" id="mgInto" list="rbLists" placeholder="mixarchive / Some Label"></label>
+      </div>
+      <datalist id="rbLists"></datalist>
+      <div class="checks" style="margin-top:8px"><label><input type="checkbox" id="mgKeep"> keep the merged playlist (don't delete it)</label></div>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="btn" data-merge>Preview merge</button>
+        <button class="btn danger" data-merge data-apply>Merge in rekordbox</button>
+        <span class="muted small">Backup + plan.csv first, in _rekordbox backups.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-files">
+    <div class="card">
+      <h2>Where rekordbox's files live</h2>
+      <div class="note warn" id="mirrorNote" hidden></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Location</th><th>Format</th><th class="r">Tracks</th><th class="r">GB</th><th class="r">Missing</th><th class="r">Size changed</th></tr></thead>
+        <tbody id="areas"></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h2>Pick tracks</h2>
+      <div class="checks" id="fmtChecks">
+        <span class="muted small">Format</span>
+        <label><input type="checkbox" value="wav" checked> WAV</label>
+        <label><input type="checkbox" value="aif,aiff" checked> AIFF</label>
+        <label><input type="checkbox" value="flac"> FLAC</label>
+        <label><input type="checkbox" value="mp3"> MP3</label>
+        <label><input type="checkbox" value="m4a"> M4A</label>
+        <label><input type="checkbox" id="onlyMissing"> only missing files</label>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <label class="field">Under folder (optional)<input type="text" id="fUnder" placeholder="D:\USB stick backup\Contents"></label>
+        <label class="field">In playlist or folder (optional)<input type="text" id="fPlaylist" placeholder="e.g. SETS"></label>
+      </div>
+      <div class="toolbar" style="margin-top:12px">
+        <button class="btn" data-files="audit">List them</button>
+        <button class="btn" data-files="verify">Verify</button>
+        <label class="small"><input type="checkbox" id="fDecode"> also decode every file (slow)</label>
+      </div>
+
+      <h3>Move them</h3>
+      <div class="grid">
+        <label class="field">To folder<input type="text" id="mTo" placeholder="D:\DJ\Library\Lossless"></label>
+        <label class="field">Layout
+          <select id="mLayout">
+            <option value="playlist">by playlist (smallest playlist holding each track)</option>
+            <option value="keep">keep the folders below “Under folder”</option>
+            <option value="artist">by artist / album (from rekordbox)</option>
+            <option value="flat">all in one folder</option>
+          </select></label>
+      </div>
+      <div class="checks" style="margin-top:8px"><label><input type="checkbox" id="mCopy"> copy instead (originals stay where they are)</label></div>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="btn" data-files="move">Preview move</button>
+        <button class="btn danger" data-files="move" data-apply>Move + update rekordbox</button>
+        <span class="muted small">Cues, grids and analysis stay. Same drive = instant renames. Backup + undo journal first.</span>
+      </div>
+
+      <h3>Relocate missing files</h3>
+      <label class="field">Search these folders (one per line)<textarea id="rSearch" style="min-height:56px" placeholder="D:\DJ"></textarea></label>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="btn" data-files="relocate">Preview relocate</button>
+        <button class="btn danger" data-files="relocate" data-apply>Relocate in rekordbox</button>
+        <span class="muted small">Same file name (and size) → rekordbox points at it.</span>
+      </div>
+
+      <h3>Undo a move / relocate</h3>
+      <div class="toolbar">
+        <select id="journals" style="width:auto;min-width:260px"></select>
+        <button class="btn" data-files="undo">Preview undo</button>
+        <button class="btn danger" data-files="undo" data-apply>Undo</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<section id="console" class="min" aria-label="Command output">
+  <div class="bar">
+    <span class="pill" id="conState" style="background:rgba(255,255,255,.08)"><span class="dot"></span><span>idle</span></span>
+    <code id="conCmd">No command run yet.</code>
+    <button class="btn small" id="conStop" disabled>Stop</button>
+    <button class="btn small" id="conToggle">Show</button>
+  </div>
+  <pre id="conOut"></pre>
+</section>
+<div id="toast" role="alert" hidden></div>
+
+<script>
+(() => {
+  const token = new URLSearchParams(location.search).get("t") || "";
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const gb = b => (b / 1e9).toFixed(1);
+  const num = n => (n || 0).toLocaleString();
+  let state = { overview: null, rb: null, job: null, rbOpen: false, collections: [] };
+
+  async function api(path, body) {
+    const r = await fetch(path, body === undefined ? { headers: { "X-Token": token } }
+      : { method: "POST", headers: { "X-Token": token, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || r.statusText);
+    return data;
+  }
+  let toastTimer = null;
+  function say(msg, field) {   // not alert(): that blocks the page until it's dismissed
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
+    if (field) $(field).focus();
+  }
+
+  // ------------------------------------------------------------ tabs
+  function show(tab) {
+    $$("nav [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+    $$(".panel").forEach(p => p.classList.toggle("on", p.id === "tab-" + tab));
+    history.replaceState(null, "", "#" + tab);
+    if (tab === "files") loadJournals();
+  }
+  $$("nav [data-tab]").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
+  $$("[data-goto]").forEach(b => b.addEventListener("click", () => show(b.dataset.goto)));
+
+  // ------------------------------------------------------------ commands + console
+  let logFrom = 0, polling = null;
+  async function run(args) {
+    try {
+      const s = await api("/api/run", { args });
+      $("#conOut").textContent = ""; logFrom = 0;
+      $("#console").classList.remove("min"); $("#conToggle").textContent = "Hide";
+      renderJob(s); poll();
+    } catch (e) { say(e.message); }
+  }
+  function poll() {
+    clearTimeout(polling);
+    polling = setTimeout(async () => {
+      try {
+        const s = await api("/api/job?from=" + logFrom);
+        renderJob(s);
+        if (s.running) poll(); else { loadOverview(); if (["rbsync", "files", "update", "merge"].includes((s.args || [])[0])) setTimeout(loadRb, 800); }
+      } catch (e) { poll(); }
+    }, 600);
+  }
+  function renderJob(s) {
+    state.job = s;
+    if (s.lines && s.lines.length) {
+      const pre = $("#conOut"), atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 30;
+      pre.textContent += s.lines.join("\n") + "\n";
+      logFrom = s.total;
+      if (atEnd) pre.scrollTop = pre.scrollHeight;
+    }
+    if (s.args) $("#conCmd").textContent = "mixarchive " + s.args.map(a => /\s/.test(a) ? `"${a}"` : a).join(" ");
+    const [cls, text] = s.running ? ["warn", "running"] : s.code === null || s.code === undefined ? ["", "idle"]
+      : s.code === 0 ? ["good", "finished"] : ["bad", "failed (" + s.code + ")"];
+    for (const el of [$("#conState"), $("#jobPill")]) {
+      el.querySelector(".dot").className = "dot " + cls;
+      el.querySelector("span:last-child").textContent = el.id === "jobPill" && s.args ? `${text}: ${s.args[0]}` : text;
+    }
+    $("#conStop").disabled = !s.running;
+    $$("[data-run],[data-files],[data-merge],#addBtn,#stepUpdate,#stepSync").forEach(b => b.dataset.busy = s.running ? "1" : "");
+    gate();
+  }
+  function gate() {   // disable while busy, and rekordbox-writing buttons while it's open
+    $$("[data-run],[data-files],[data-merge],#addBtn,#stepUpdate,#stepSync").forEach(b => {
+      const writes = b.hasAttribute("data-needs-closed") || b.hasAttribute("data-apply") || b.id === "stepSync";
+      b.disabled = !!b.dataset.busy || (writes && state.rbOpen);
+      b.title = writes && state.rbOpen ? "Close rekordbox first" : "";
+    });
+  }
+  $("#conStop").addEventListener("click", async () => { renderJob(await api("/api/stop", {})); });
+  $("#conToggle").addEventListener("click", () => {
+    const min = $("#console").classList.toggle("min"); $("#conToggle").textContent = min ? "Show" : "Hide";
+  });
+  $$("[data-run]").forEach(b => b.addEventListener("click", () => run(JSON.parse(b.dataset.run))));
+  $("#stepUpdate").addEventListener("click", () => run(["update", "--no-rbsync"]));
+  $("#stepSync").addEventListener("click", () => run(["rbsync"]));
+  $$("[data-open]").forEach(b => b.addEventListener("click", async () => {
+    try { await api("/api/open", { what: b.dataset.open }); setTimeout(loadOverview, 3000); } catch (e) { say(e.message); }
+  }));
+
+  // two clicks for anything that changes files or rekordbox
+  function armed(btn) {
+    if (btn.classList.contains("armed")) { btn.classList.remove("armed"); btn.textContent = btn.dataset.label; return true; }
+    btn.dataset.label = btn.textContent; btn.classList.add("armed"); btn.textContent = "Click again to confirm";
+    setTimeout(() => { if (btn.classList.contains("armed")) { btn.classList.remove("armed"); btn.textContent = btn.dataset.label; } }, 4000);
+    return false;
+  }
+
+  // ------------------------------------------------------------ collections
+  async function loadOverview() {
+    try {
+      const o = await api("/api/overview");
+      state.overview = o; state.rbOpen = o.rekordbox_running; state.collections = o.collections;
+      $("#libRoot").textContent = o.library_root;
+      renderRbPill(); renderCollections(); fillCollectionSelect();
+      if (!state.job) renderJob(o.job);
+      gate();
+    } catch (e) { $("#collections").innerHTML = `<tr><td colspan="7">${esc(e.message)}</td></tr>`; }
+  }
+  function renderRbPill() {
+    const p = $("#rbPill");
+    p.querySelector(".dot").className = "dot " + (state.rbOpen ? "warn" : "good");
+    p.querySelector("span:last-child").textContent = state.rbOpen ? "rekordbox open" : "rekordbox closed";
+    $("#stepSyncState").textContent = state.rbOpen ? "rekordbox is open: close it to sync" : "";
+  }
+  function renderCollections() {
+    const tb = $("#collections");
+    tb.innerHTML = state.collections.map(c => {
+      if (c.error) return `<tr><td>${esc(c.name)}</td><td colspan="6" class="muted">${esc(c.error)}</td></tr>`;
+      const s = c.singles || {}, total = Object.values(s).reduce((a, b) => a + b, 0);
+      const notes = [s.check && s.check + " to check", s.dup && s.dup + " dup", s.skip && s.skip + " skipped"].filter(Boolean);
+      const singles = total ? `${num((s.ok || 0) + (s.check || 0) + (s.manual || 0))}` +
+        (notes.length ? `<div class="muted small">${notes.join(" · ")}</div>` : "") : "–";
+      const pl = c.playlists || [], tracks = pl.reduce((a, p) => a + p.tracks, 0), bytes = pl.reduce((a, p) => a + p.bytes, 0);
+      const links = c.links || [];
+      return `<tr>
+        <td><b>${esc(c.name)}</b> <span class="kind">${esc(c.kind)}</span>${c.label ? `<div class="muted small">Label: ${esc(c.label)}</div>` : ""}</td>
+        <td class="links small" title="${esc(links.join("\n"))}">${links.length > 1 ? links.length + " sources" : esc(links[0] || "–")}</td>
+        <td class="r">${c.mixes ? `${num(c.mixes_fetched)} / ${num(c.mixes)}` : "–"}${c.skipped ? `<div class="muted small">${num(c.skipped)} skipped</div>` : ""}</td>
+        <td class="r">${singles}</td>
+        <td class="r">${num(tracks)}${pl.length > 1 ? `<div class="muted small">${pl.length} playlists</div>` : ""}</td>
+        <td class="r">${gb(bytes)}</td>
+        <td class="actions"><button class="btn small" data-c-run="${esc(c.name)}">Update</button>
+          <button class="btn small" data-c-status="${esc(c.name)}">Status</button>
+          <button class="btn small" data-c-open="${esc(c.name)}">Folder</button></td></tr>`;
+    }).join("") || `<tr><td colspan="7" class="muted">No collections yet: add some links.</td></tr>`;
+    tb.querySelectorAll("[data-c-run]").forEach(b => { b.dataset.run = "x"; b.addEventListener("click", () => run(["update", "--no-rbsync", b.dataset.cRun])); });
+    tb.querySelectorAll("[data-c-status]").forEach(b => b.addEventListener("click", () => run(["status", b.dataset.cStatus])));
+    tb.querySelectorAll("[data-c-open]").forEach(b => b.addEventListener("click", () => api("/api/open", { what: "folder", name: b.dataset.cOpen }).catch(e => say(e.message))));
+    if (state.job) renderJob({ ...state.job, lines: [] });
+  }
+  function fillCollectionSelect() {
+    const sel = $("#addTo"), cur = sel.value;
+    sel.innerHTML = state.collections.filter(c => c.kind !== "local folder")
+      .map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("");
+    if (cur) sel.value = cur;
+  }
+  $("#refreshOverview").addEventListener("click", loadOverview);
+
+  // ------------------------------------------------------------ add
+  function kindOf(u) {     // mirrors yt.kind_of
+    u = u.trim();
+    if (/^[\w-]{11}$/.test(u)) return ["video", u];
+    let m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/))([\w-]{11})/);
+    if (m) return ["video", m[1]];
+    if (/youtube\.com\/playlist\?(?:.*&)?list=[\w-]+/.test(u)) return ["playlist", u];
+    if (/^https?:\/\/(?:www\.|m\.)?youtube\.com\/(?:@[^/?#]+|channel\/[\w-]+|c\/[^/?#]+|user\/[^/?#]+)/.test(u)) return ["channel", u];
+    return [null, u];
+  }
+  function urlList() {   // one per line; a line of several links separated by spaces is split too
+    return $("#urls").value.split("\n").flatMap(line => {
+      const parts = line.trim().split(/\s+/).filter(Boolean);
+      return parts.length > 1 && parts.every(p => /^https?:\/\//.test(p)) ? parts : [line.trim()];
+    }).filter(Boolean);
+  }
+  function renderPreview() {
+    const to = $("input[name=dest]:checked").value === "to" ? $("#addTo").value : null;
+    $("#newFields").hidden = !!to;
+    $("#urlPreview").innerHTML = urlList().map(u => {
+      const [k] = kindOf(u);
+      const where = !k ? `<b style="color:var(--bad)">not a YouTube channel, playlist or video link</b>`
+        : to ? `→ ${esc(to)}` : k === "video" ? "→ YouTube picks" : "→ new collection";
+      return `<li><span class="kind">${k || "?"}</span> ${esc(u)} <span class="muted">${where}</span></li>`;
+    }).join("");
+  }
+  $("#urls").addEventListener("input", renderPreview);
+  $$("input[name=dest]").forEach(r => r.addEventListener("change", renderPreview));
+  $("#addTo").addEventListener("change", () => { $("input[name=dest][value=to]").checked = true; renderPreview(); });
+  $("#addBtn").addEventListener("click", () => {
+    const urls = urlList();
+    if (!urls.length) return say("Paste at least one link.", "#urls");
+    if (urls.some(u => !kindOf(u)[0])) return say("One of the lines isn't a YouTube channel, playlist or video link.", "#urls");
+    const args = ["add", ...urls];
+    if ($("input[name=dest]:checked").value === "to") args.push("--to", $("#addTo").value);
+    else {
+      for (const [id, flag] of [["#addLabel", "--label"], ["#addGenre", "--genre"], ["#addName", "--name"]])
+        if ($(id).value.trim()) args.push(flag, $(id).value.trim());
+      if ($("#addNoYear").checked) args.push("--no-upload-year");
+    }
+    if ($("#addRun").checked) args.push("--run");
+    run(args);
+  });
+
+  // ------------------------------------------------------------ rekordbox
+  async function loadRb(refresh) {
+    try {
+      const r = await api("/api/rekordbox" + (refresh ? "?refresh=1" : ""));
+      state.rb = r;
+      if (r.loading) { $("#rbAt").textContent = "reading rekordbox's database…"; setTimeout(loadRb, 1500); }
+      else $("#rbAt").textContent = r.error ? "couldn't read rekordbox: " + r.error : r.at ? "read " + new Date(r.at * 1000).toLocaleTimeString() : "";
+      renderRb();
+    } catch (e) { $("#rbAt").textContent = e.message; }
+  }
+  function renderRb() {
+    const s = state.rb && state.rb.status;
+    if (!s) return;
+    const notAn = s.tracks - s.analyzed;
+    $("#rbStats").innerHTML = [
+      [s.running ? "open" : "closed", "rekordbox"], [num(s.tracks), "tracks in the collection"],
+      [num(notAn), "not analyzed"], [num(s.missing), "missing files"]]
+      .map(([v, l]) => `<div class="stat"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("");
+    const na = (s.mixarchive || []).find(p => p.name === "Not analyzed yet");
+    $("#stepAnalyzeState").textContent = na ? `${num(na.not_analyzed)} tracks waiting` : notAn ? "" : "all analyzed";
+    $("#rbPlaylists").innerHTML = (s.mixarchive || []).map(p =>
+      `<tr><td>${esc(p.name)}</td><td class="r">${num(p.tracks)}</td><td class="r">${gb(p.bytes)}</td>
+       <td class="r">${p.not_analyzed ? num(p.not_analyzed) : "–"}</td></tr>`).join("")
+      || `<tr><td colspan="4" class="muted">No mixarchive folder in rekordbox yet: Sync to make it.</td></tr>`;
+    $("#rbLists").innerHTML = (s.playlists || []).map(n => `<option value="${esc(n)}"></option>`).join("");
+    $("#areas").innerHTML = (s.areas || []).map(a =>
+      `<tr><td>${esc(a.area)}</td><td>${esc(a.format)}</td><td class="r">${num(a.tracks)}</td><td class="r">${gb(a.bytes)}</td>
+       <td class="r">${a.missing ? num(a.missing) : ""}</td><td class="r">${a.changed ? num(a.changed) : ""}</td></tr>`).join("");
+    const inMirror = (s.areas || []).filter(a => a.area === s.mirror_area);
+    const n = inMirror.reduce((t, a) => t + a.tracks, 0), b = inMirror.reduce((t, a) => t + a.bytes, 0);
+    $("#mirrorNote").hidden = !n;
+    $("#mirrorNote").innerHTML = `<b>${num(n)} tracks (${gb(b)} GB) play from inside the USB stick's backup folder.</b>
+      That folder is a copy of the stick, not a library: rekordbox re-files its exports into <i>Contents</i>, and a stick backup can overwrite or prune them.
+      Move them out below (pick formats / “Under folder”, then Preview).`;
+    gate();
+  }
+  $("#refreshRb").addEventListener("click", () => loadRb(true));
+  $$("[data-merge]").forEach(b => b.addEventListener("click", () => {
+    const from = $("#mgFrom").value.trim(), into = $("#mgInto").value.trim();
+    if (!from || !into) return say("Fill in both playlists.", from ? "#mgInto" : "#mgFrom");
+    const args = ["merge", from, "--into", into];
+    if ($("#mgKeep").checked) args.push("--keep-source");
+    if (b.hasAttribute("data-apply")) { if (!armed(b)) return; args.push("--apply"); }
+    run(args);
+  }));
+
+  // ------------------------------------------------------------ library files
+  function filterArgs() {
+    const args = [];
+    const exts = $$("#fmtChecks input[value]:checked").map(i => i.value).join(",");
+    if (exts) args.push("--ext=" + exts);
+    if ($("#fUnder").value.trim()) args.push("--under=" + $("#fUnder").value.trim());
+    if ($("#fPlaylist").value.trim()) args.push("--playlist=" + $("#fPlaylist").value.trim());
+    if ($("#onlyMissing").checked) args.push("--missing");
+    return args;
+  }
+  $$("[data-files]").forEach(b => b.addEventListener("click", () => {
+    const cmd = b.dataset.files, apply = b.hasAttribute("data-apply");
+    let args = ["files", cmd];
+    if (cmd === "undo") {
+      if (!$("#journals").value) return say("No moves or relocates to undo yet.");
+      args.push($("#journals").value);
+    } else args.push(...filterArgs());
+    if (cmd === "audit") args.push("--list");
+    if (cmd === "verify" && $("#fDecode").checked) args.push("--decode");
+    if (cmd === "move") {
+      if (!$("#mTo").value.trim()) return say("Fill in the folder to move them to.", "#mTo");
+      args.push("--to=" + $("#mTo").value.trim(), "--layout=" + $("#mLayout").value);
+      if ($("#mCopy").checked) args.push("--copy");
+    }
+    if (cmd === "relocate") {
+      const dirs = $("#rSearch").value.split("\n").map(s => s.trim()).filter(Boolean);
+      if (!dirs.length) return say("Add at least one folder to search.", "#rSearch");
+      dirs.forEach(d => args.push("--search=" + d));
+    }
+    if (apply) { if (!armed(b)) return; args.push("--apply"); }
+    run(args);
+  }));
+  async function loadJournals() {
+    try {
+      const js = await api("/api/journals");
+      $("#journals").innerHTML = js.map(j => `<option value="${esc(j.path)}">${esc(j.name)} (${num(j.changes)} changes)</option>`).join("")
+        || `<option value="">nothing to undo yet</option>`;
+    } catch (e) { /* the list just stays empty */ }
+  }
+
+  // ------------------------------------------------------------ start
+  if (/^#(collections|add|rekordbox|files)$/.test(location.hash)) show(location.hash.slice(1));
+  loadOverview(); loadRb(); poll();
+  setInterval(() => { if (!state.job || !state.job.running) loadOverview(); }, 15000);
+})();
+</script>
+</body>
+</html>

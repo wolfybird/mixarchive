@@ -1,0 +1,5 @@
+{
+ "ffmpeg": "C:\\ffmpeg\\bin\\ffmpeg.exe",
+ "ffprobe": "C:\\ffmpeg\\bin\\ffprobe.exe",
+ "usb_mirror": ""
+}

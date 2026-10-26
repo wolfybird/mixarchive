@@ -1,0 +1,34 @@
+# environments and build output
+venv/
+rbvenv/
+*.egg-info/
+__pycache__/
+*.pyc
+build/
+dist/
+
+# this machine's settings, library list and logs
+settings.json
+library.json
+cache/
+
+# third-party tools: install them yourself (see README)
+tools/
+
+# music and cover art never belong in the repo
+*.mp3
+*.wav
+*.flac
+*.aif
+*.aiff
+*.opus
+*.m4a
+*.ogg
+*.webm
+*.jpg
+
+# rekordbox databases and backups
+*.db
+*.db-wal
+*.db-shm
+_rekordbox backups/

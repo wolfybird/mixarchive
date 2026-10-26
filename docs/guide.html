@@ -1,0 +1,621 @@
+<meta charset="utf-8">
+<title>mixarchive Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a handbook column (~68ch) on a cool deck-grey ground; diagrams, tables and screenshots break out to the full 1120px measure. Sticky section rail on top. */
+:root {
+  --bg: #eef1f4;
+  --panel: #fbfcfd;
+  --ink: #13171c;
+  --ink-2: #48505a;
+  --muted: #6c747f;
+  --line: #d8dee5;
+  --line-2: #b8c0ca;
+  --code-bg: #e3e8ee;
+  --accent: #b9530b;      /* CDJ cue-button orange: steps you do */
+  --wave: #2a6fd6;        /* rekordbox waveform blue: data marks */
+  --wave-soft: #dde8f8;
+  --good: #11800f;
+  --bad: #c42f2f;
+  --warn: #8f6200;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1216; --panel: #161a20; --ink: #e8ecf0; --ink-2: #b3bbc5; --muted: #8a939e;
+    --line: #262c34; --line-2: #3b434d; --code-bg: #222831;
+    --accent: #f08a3c; --wave: #5b9cf0; --wave-soft: #1a2940;
+    --good: #3cc04a; --bad: #f06b6b; --warn: #e0a52a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1216; --panel: #161a20; --ink: #e8ecf0; --ink-2: #b3bbc5; --muted: #8a939e;
+  --line: #262c34; --line-2: #3b434d; --code-bg: #222831;
+  --accent: #f08a3c; --wave: #5b9cf0; --wave-soft: #1a2940;
+  --good: #3cc04a; --bad: #f06b6b; --warn: #e0a52a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.6; margin: 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+a { color: var(--wave); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+p { margin: 0; }
+code, .path { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+/* rail */
+.rail { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); }
+.rail-inner { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 24px; height: 52px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+.rail-inner::-webkit-scrollbar { display: none; }
+.brand { font-family: var(--display); font-stretch: 80%; font-weight: 750; font-size: 17px; letter-spacing: .01em; color: var(--ink); text-decoration: none; }
+.rail nav { display: flex; gap: 18px; }
+.rail nav a { color: var(--ink-2); text-decoration: none; font-size: 14px; padding-block: 14px; border-bottom: 2px solid transparent; }
+.rail nav a:hover { color: var(--ink); }
+.rail nav a[aria-current="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* page */
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 44px 96px; }
+.prose { max-width: 68ch; display: grid; gap: 14px; }
+section { padding-block: 48px; border-top: 1px solid var(--line); display: grid; gap: 22px; }
+section.intro { border-top: 0; padding-top: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-stretch: 78%; font-weight: 780; font-size: clamp(2.4rem, 6vw, 3.8rem); line-height: 1.02; letter-spacing: -.005em; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-stretch: 84%; font-weight: 720; font-size: clamp(1.6rem, 3.4vw, 2.1rem); line-height: 1.1; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--display); font-stretch: 90%; font-weight: 680; font-size: 1.22rem; line-height: 1.2; margin: 0; text-wrap: balance; }
+h4 { font-family: var(--body); font-weight: 600; font-size: 1rem; margin: 0; }
+.lede { font-size: 1.12rem; color: var(--ink-2); max-width: 62ch; }
+.note { font-size: 14.5px; color: var(--ink-2); }
+ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+
+/* figures */
+figure { margin: 0; display: grid; gap: 10px; }
+.fig-scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+svg.diagram { display: block; width: 100%; height: auto; color: var(--ink-2); }
+svg.arch { min-width: 820px; }
+svg.stickdb { min-width: 660px; max-width: 880px; }
+figcaption { font-size: 14px; color: var(--ink-2); max-width: 76ch; }
+.d-box { fill: var(--panel); stroke: var(--line-2); stroke-width: 1.25; }
+.d-key { fill: var(--wave-soft); stroke: var(--wave); stroke-width: 1.5; }
+.d-title { fill: var(--ink); font: 600 14px var(--body); }
+.d-sub { fill: var(--muted); font: 400 11px var(--body); }
+.d-lab { fill: var(--ink-2); font: 500 11px var(--body); }
+.d-mono { fill: var(--ink); font: 400 11px var(--mono); }
+.d-line { stroke: var(--ink-2); stroke-width: 1.5; fill: none; }
+.d-head { fill: var(--ink-2); }
+
+/* steps */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 34px; }
+.step { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px 18px; }
+.step-no { font-family: var(--display); font-stretch: 75%; font-weight: 780; font-size: 2.3rem; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.step-body { display: grid; gap: 10px; min-width: 0; }
+.step-body > p { max-width: 68ch; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; line-height: 1.3; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--ink-2); background: var(--panel); }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--muted); }
+.pill.need-closed .dot { border-color: var(--bad); }
+.pill.need-open .dot { background: var(--good); border-color: var(--good); }
+.shot.wide { max-width: 100%; }
+.shot { display: block; width: 100%; max-width: 820px; height: auto; border: 1px solid var(--line-2); border-radius: 8px; box-shadow: 0 14px 34px -22px rgba(10, 20, 35, .55); }
+.cmd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cmd code { font-size: 14px; padding: 6px 10px; }
+.copy { font: 500 12.5px var(--body); color: var(--ink-2); background: var(--panel); border: 1px solid var(--line-2); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--ink-2); }
+pre.block { margin: 0; font: 400 13px/1.6 var(--mono); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; overflow-x: auto; color: var(--ink-2); max-width: 820px; }
+pre.block b { color: var(--ink); font-weight: 500; }
+
+/* faq */
+.faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; }
+.faq div { display: grid; gap: 4px; align-content: start; padding-top: 12px; border-top: 1px solid var(--line); }
+.faq h4 { font-size: 15px; }
+.faq p { font-size: 14.5px; color: var(--ink-2); }
+
+/* tables */
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 700px; font-size: 14.5px; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid var(--line-2); padding: 10px 14px; vertical-align: bottom; }
+td { border-bottom: 1px solid var(--line); padding: 11px 14px; vertical-align: top; color: var(--ink-2); }
+td:first-child { color: var(--ink); font-weight: 500; }
+tr:last-child td { border-bottom: 0; }
+td .path { font-size: 12.5px; }
+.mark { font-weight: 700; margin-right: 5px; }
+.mark.ok { color: var(--good); } .mark.no { color: var(--bad); } .mark.warn { color: var(--warn); }
+
+/* merge flow */
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 6px; align-items: center; }
+.chips li { display: inline-flex; align-items: center; gap: 6px; }
+.chips li:not(:last-child)::after { content: "→"; color: var(--muted); margin-left: 2px; }
+.chip { display: inline-flex; flex-direction: column; gap: 1px; padding: 6px 11px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--panel); font-size: 13.5px; line-height: 1.35; color: var(--ink); }
+.chip small { color: var(--muted); font-size: 12px; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; display: grid; gap: 4px; max-width: 80ch; }
+.callout h4 { font-size: 14.5px; }
+.callout p { font-size: 14.5px; color: var(--ink-2); }
+
+/* good to know */
+.later { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.later div { border: 1px dashed var(--line-2); border-radius: 10px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.later p { font-size: 14.5px; color: var(--ink-2); }
+
+footer { border-top: 1px solid var(--line); padding-top: 22px; font-size: 13.5px; color: var(--muted); display: grid; gap: 6px; }
+
+@media (max-width: 900px) {
+  .faq, .later { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .step { grid-template-columns: minmax(0, 1fr); }
+  .step-no { font-size: 1.8rem; }
+}
+</style>
+
+<div class="rail">
+  <div class="rail-inner">
+    <a class="brand" href="#top">mixarchive</a>
+    <nav aria-label="Sections">
+      <a href="#overview">How it fits</a>
+      <a href="#setup">Setup</a>
+      <a href="#daily">Day to day</a>
+      <a href="#where">Where things live</a>
+      <a href="#safety">Safety net</a>
+      <a href="#merges">Merging playlists</a>
+      <a href="#good-to-know">Good to know</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap" id="top">
+
+<section class="intro">
+  <span class="eyebrow">mixarchive · rekordbox · Pioneer DJ players</span>
+  <h1>mixarchive Guide</h1>
+  <p class="lede">How music gets from YouTube and your own folders onto a USB stick for the decks, which program does each step, and where the safety copies are. Start here. The README lists every command and option.</p>
+  <p class="note">Paths on this page are examples: <span class="path">C:\mixarchive</span> for the tool, <span class="path">D:\DJ\Library</span> for your music, <span class="path">E:</span> for the USB stick and <span class="path">B:</span> for a backup drive. Use your own. The collections in the screenshots are made up.</p>
+</section>
+
+<section id="overview">
+  <div class="prose">
+    <h2>How it fits together</h2>
+    <p>Music moves left to right: YouTube, then mixarchive, then your Library folder, then rekordbox, then the USB stick, then the decks. mixarchive does the first three moves on its own. rekordbox does the analysis and the export to the stick, because nothing else can.</p>
+  </div>
+  <figure>
+    <div class="fig-scroll">
+      <svg class="diagram arch" viewBox="0 0 1080 322" role="img" aria-label="Pipeline: YouTube is downloaded by mixarchive, split into tagged tracks in your Library folder, synced into rekordbox, exported by you to the USB stick, and read by the DJ player. The Library is mirrored to a backup drive, and mixarchive saves a copy of rekordbox's database in _rekordbox backups before each write.">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-head"/></marker>
+        </defs>
+        <!-- row 1: the pipeline -->
+        <rect class="d-box" x="20" y="60" width="118" height="86" rx="8"/>
+        <text class="d-title" x="79" y="96" text-anchor="middle">YouTube</text>
+        <text class="d-sub" x="79" y="114" text-anchor="middle">channels,</text>
+        <text class="d-sub" x="79" y="129" text-anchor="middle">playlists, videos</text>
+
+        <rect class="d-box" x="204" y="60" width="118" height="86" rx="8"/>
+        <text class="d-title" x="263" y="96" text-anchor="middle">mixarchive</text>
+        <text class="d-sub" x="263" y="114" text-anchor="middle">the tool</text>
+        <text class="d-sub" x="263" y="129" text-anchor="middle">C:\mixarchive</text>
+
+        <rect class="d-box" x="388" y="60" width="118" height="86" rx="8"/>
+        <text class="d-title" x="447" y="96" text-anchor="middle">Library</text>
+        <text class="d-sub" x="447" y="114" text-anchor="middle">your music files</text>
+        <text class="d-sub" x="447" y="129" text-anchor="middle">D:\DJ\Library</text>
+
+        <rect class="d-box" x="572" y="60" width="118" height="86" rx="8"/>
+        <text class="d-title" x="631" y="96" text-anchor="middle">rekordbox</text>
+        <text class="d-sub" x="631" y="114" text-anchor="middle">master.db</text>
+        <text class="d-sub" x="631" y="129" text-anchor="middle">you analyze here</text>
+
+        <rect class="d-key" x="756" y="60" width="118" height="86" rx="8"/>
+        <text class="d-title" x="815" y="96" text-anchor="middle">USB stick</text>
+        <text class="d-sub" x="815" y="114" text-anchor="middle">E:</text>
+        <text class="d-sub" x="815" y="129" text-anchor="middle">2 databases</text>
+
+        <rect class="d-box" x="940" y="60" width="118" height="86" rx="8"/>
+        <text class="d-title" x="999" y="96" text-anchor="middle">DJ player</text>
+        <text class="d-sub" x="999" y="114" text-anchor="middle">CDJ / XDJ</text>
+        <text class="d-sub" x="999" y="129" text-anchor="middle">reads the stick</text>
+
+        <line class="d-line" x1="142" y1="103" x2="199" y2="103" marker-end="url(#ah)"/>
+        <text class="d-lab" x="171" y="95" text-anchor="middle">download</text>
+        <text class="d-sub" x="171" y="119" text-anchor="middle">Opus</text>
+        <line class="d-line" x1="326" y1="103" x2="383" y2="103" marker-end="url(#ah)"/>
+        <text class="d-lab" x="355" y="95" text-anchor="middle">split, tag</text>
+        <text class="d-sub" x="355" y="119" text-anchor="middle">−14 LUFS</text>
+        <line class="d-line" x1="510" y1="103" x2="567" y2="103" marker-end="url(#ah)"/>
+        <text class="d-lab" x="539" y="95" text-anchor="middle">Sync</text>
+        <text class="d-sub" x="539" y="119" text-anchor="middle">rbsync</text>
+        <line class="d-line" x1="694" y1="103" x2="751" y2="103" marker-end="url(#ah)"/>
+        <text class="d-lab" x="723" y="95" text-anchor="middle">you export</text>
+        <text class="d-sub" x="723" y="119" text-anchor="middle">playlists</text>
+        <line class="d-line" x1="878" y1="103" x2="935" y2="103" marker-end="url(#ah)"/>
+        <text class="d-lab" x="907" y="95" text-anchor="middle">plug in</text>
+        <text class="d-sub" x="907" y="119" text-anchor="middle">browse</text>
+
+        <!-- row 2: copies -->
+        <rect class="d-box" x="367" y="226" width="160" height="82" rx="8"/>
+        <text class="d-title" x="447" y="256" text-anchor="middle">Backup drive</text>
+        <text class="d-sub" x="447" y="274" text-anchor="middle">B:\DJ Backup</text>
+        <text class="d-sub" x="447" y="290" text-anchor="middle">your backup tool</text>
+
+        <rect class="d-box" x="551" y="226" width="160" height="82" rx="8"/>
+        <text class="d-title" x="631" y="256" text-anchor="middle">_rekordbox backups</text>
+        <text class="d-sub" x="631" y="274" text-anchor="middle">next to the library</text>
+        <text class="d-sub" x="631" y="290" text-anchor="middle">last 10 of each kind</text>
+
+        <line class="d-line" x1="447" y1="150" x2="447" y2="221" marker-end="url(#ah)"/>
+        <text class="d-lab" x="439" y="190" text-anchor="end">mirror</text>
+        <line class="d-line" x1="631" y1="150" x2="631" y2="221" marker-end="url(#ah)"/>
+        <text class="d-lab" x="639" y="184">copy of master.db</text>
+        <text class="d-sub" x="639" y="198">before each write</text>
+      </svg>
+    </div>
+    <figcaption>Every arrow happens as part of normal use. <span class="path">_rekordbox backups</span> sits inside the library folder, so mirroring the library copies it too. Back up rekordbox's own folder (<span class="path">%APPDATA%\Pioneer\rekordbox</span>) as well, with rekordbox closed.</figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>The stick holds two databases</h3>
+    <p>When you export a playlist to the stick, rekordbox writes it twice: once for older players and once for newer ones. Most players in use today, such as the CDJ-2000NXS2 and XDJ-1000MK2, read only the older file, <code>export.pdb</code>.</p>
+  </div>
+  <figure>
+    <div class="fig-scroll">
+      <svg class="diagram stickdb" viewBox="0 0 820 216" role="img" aria-label="One rekordbox export writes export.pdb, exportLibrary.db and the audio in Contents. Most players read export.pdb, newer OneLibrary players read exportLibrary.db, and folder browsing reads Contents.">
+        <defs>
+          <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-head"/></marker>
+        </defs>
+        <rect class="d-box" x="20" y="70" width="150" height="80" rx="8"/>
+        <text class="d-title" x="95" y="104" text-anchor="middle">rekordbox</text>
+        <text class="d-sub" x="95" y="122" text-anchor="middle">you export a playlist</text>
+        <text class="d-sub" x="95" y="137" text-anchor="middle">to the stick</text>
+
+        <rect class="d-box" x="248" y="14" width="288" height="190" rx="10"/>
+        <text class="d-title" x="264" y="38">USB stick (E:)</text>
+        <rect class="d-key" x="262" y="54" width="260" height="40" rx="6"/>
+        <text class="d-mono" x="274" y="78">PIONEER\rekordbox\export.pdb</text>
+        <rect class="d-box" x="262" y="102" width="260" height="40" rx="6"/>
+        <text class="d-mono" x="274" y="126">PIONEER\rekordbox\exportLibrary.db</text>
+        <rect class="d-box" x="262" y="150" width="260" height="40" rx="6"/>
+        <text class="d-mono" x="274" y="174">Contents\Artist\Album\ (audio)</text>
+
+        <line class="d-line" x1="174" y1="104" x2="257" y2="74" marker-end="url(#ah2)"/>
+        <line class="d-line" x1="174" y1="110" x2="257" y2="122" marker-end="url(#ah2)"/>
+        <line class="d-line" x1="174" y1="116" x2="257" y2="168" marker-end="url(#ah2)"/>
+        <text class="d-lab" x="95" y="174" text-anchor="middle">one export</text>
+        <text class="d-sub" x="95" y="188" text-anchor="middle">writes all three</text>
+
+        <rect class="d-key" x="612" y="54" width="196" height="40" rx="6"/>
+        <text class="d-title" x="626" y="71">most players</text>
+        <text class="d-sub" x="626" y="86">CDJ-2000NXS2, XDJ-1000MK2</text>
+        <rect class="d-box" x="612" y="102" width="196" height="40" rx="6"/>
+        <text class="d-sub" x="626" y="120">newer players (OneLibrary)</text>
+        <text class="d-sub" x="626" y="134">CDJ-3000X, XDJ-AZ</text>
+        <rect class="d-box" x="612" y="150" width="196" height="40" rx="6"/>
+        <text class="d-sub" x="626" y="168">folder browsing</text>
+        <text class="d-sub" x="626" y="182">older decks</text>
+
+        <line class="d-line" x1="604" y1="74" x2="527" y2="74" marker-end="url(#ah2)"/>
+        <line class="d-line" x1="604" y1="122" x2="527" y2="122" marker-end="url(#ah2)"/>
+        <line class="d-line" x1="604" y1="170" x2="527" y2="170" marker-end="url(#ah2)"/>
+        <text class="d-lab" x="566" y="66" text-anchor="middle">reads</text>
+      </svg>
+    </div>
+    <figcaption>One export writes all three. The two databases can disagree after an export goes wrong, and rekordbox's own view of the stick may still look fine. So after a big export, browse a few playlists on the player you'll actually use.</figcaption>
+  </figure>
+</section>
+
+<section id="setup">
+  <div class="prose">
+    <h2>Setup, once</h2>
+    <p>mixarchive runs on Windows next to rekordbox 7. You need Python, ffmpeg and about ten minutes. The README's Requirements section has the details for each piece.</p>
+  </div>
+
+  <ol class="steps">
+    <li class="step">
+      <span class="step-no">1</span>
+      <div class="step-body">
+        <h3>Get the code</h3>
+        <p>Download mixarchive from GitHub (<em>Code › Download ZIP</em>) and unzip it, or clone it with git, into a folder such as <span class="path">C:\mixarchive</span>. Keep it out of your music folders: it's the tool, not the library.</p>
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">2</span>
+      <div class="step-body">
+        <h3>Make its Python environment</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>Terminal in C:\mixarchive</span></div>
+        <p>Python 3.10 or newer. This installs mixarchive with yt-dlp and the tagging libraries.</p>
+        <div class="cmd"><code>py -3 -m venv venv</code><button class="copy" type="button" data-copy="py -3 -m venv venv">Copy</button></div>
+        <div class="cmd"><code>venv\Scripts\python -m pip install -e .</code><button class="copy" type="button" data-copy="venv\Scripts\python -m pip install -e .">Copy</button></div>
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">3</span>
+      <div class="step-body">
+        <h3>Make the rekordbox environment</h3>
+        <p>Sync, <code>files</code> and <code>merge</code> read and write rekordbox's database through pyrekordbox, which needs a newer Python for its encrypted-database support. It gets an environment of its own.</p>
+        <div class="cmd"><code>py -3.14 -m venv rbvenv</code><button class="copy" type="button" data-copy="py -3.14 -m venv rbvenv">Copy</button></div>
+        <div class="cmd"><code>rbvenv\Scripts\python -m pip install pyrekordbox==0.5.0 mutagen pillow</code><button class="copy" type="button" data-copy="rbvenv\Scripts\python -m pip install pyrekordbox==0.5.0 mutagen pillow">Copy</button></div>
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">4</span>
+      <div class="step-body">
+        <h3>Tell it where ffmpeg is</h3>
+        <p>Install ffmpeg. If it isn't on your PATH, copy <span class="path">settings.example.json</span> to <span class="path">settings.json</span> in the mixarchive folder and put its paths in. Any setting you leave out keeps its default; the README lists them all.</p>
+<pre class="block">{
+ <b>"ffmpeg"</b>: "C:\\ffmpeg\\bin\\ffmpeg.exe",
+ <b>"ffprobe"</b>: "C:\\ffmpeg\\bin\\ffprobe.exe"
+}</pre>
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">5</span>
+      <div class="step-body">
+        <h3>Add your first collection</h3>
+        <p>The first time, <code>--root</code> says where your library goes. Later collections land next to it, and label collections go in a <span class="path">labels\</span> folder beside them.</p>
+        <div class="cmd"><code>mixarchive.bat add https://www.youtube.com/@example-label --label "Harbour Lights" --root "D:\DJ\Library\mixarchive\Harbour Lights"</code><button class="copy" type="button" data-copy='mixarchive.bat add https://www.youtube.com/@example-label --label "Harbour Lights" --root "D:\DJ\Library\mixarchive\Harbour Lights"'>Copy</button></div>
+        <p class="note">After that, the GUI's Add sources tab does the same without a terminal.</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<section id="daily">
+  <div class="prose">
+    <h2>Day to day</h2>
+    <p>Most of the work happens in the mixarchive GUI, a page in your browser. The five cards along its top are the same steps as below. Two rules matter: close rekordbox before mixarchive writes to it, and keep rekordbox open while it analyzes.</p>
+  </div>
+
+  <ol class="steps">
+    <li class="step">
+      <span class="step-no">1</span>
+      <div class="step-body">
+        <h3>Start the GUI</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>Terminal</span></div>
+        <p>Open a terminal in the mixarchive folder and run the command below. Your browser opens the GUI. Leave the terminal window open while you work, because closing it stops the GUI.</p>
+        <div class="cmd"><code>mixarchive.bat gui</code><button class="copy" type="button" data-copy="mixarchive.bat gui">Copy</button></div>
+        <img class="shot" src="img/gui_collections.png" width="1280" height="860" loading="lazy" alt="The mixarchive GUI on its Collections tab: five step cards along the top (Add sources, Download and split, Into rekordbox, Analyze, USB stick), then a table of four example collections with Update, Status and Folder buttons.">
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">2</span>
+      <div class="step-body">
+        <h3>Add sources</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>GUI › Add sources</span></div>
+        <p>Paste YouTube links, one per line. A channel or playlist becomes its own collection: for a record label, fill in Label and Genre. Single videos go to <em>YouTube picks</em>. Leave <em>Download and split right away</em> ticked.</p>
+        <img class="shot" src="img/gui_add.png" width="1280" height="860" loading="lazy" alt="The Add sources tab: a box for links, a choice between new collections and an existing one, Label, Genre and Name fields, and an Add button.">
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">3</span>
+      <div class="step-body">
+        <h3>Update</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>GUI › Collections</span></div>
+        <p><em>Update all</em> checks every collection for new uploads, downloads them, finds the tracklists, and splits mixes into tagged, level-matched tracks. Progress shows in the panel at the bottom. <em>Update all + sync to rekordbox</em> also does step 4 if rekordbox is closed.</p>
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">4</span>
+      <div class="step-body">
+        <h3>Sync into rekordbox</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>GUI › rekordbox</span><span class="pill need-closed"><span class="dot"></span>rekordbox closed</span></div>
+        <p><em>Preview sync</em> lists what would change; <em>Sync to rekordbox</em> writes it. New tracks land in the playlists inside a <em>mixarchive</em> folder and in <em>Not analyzed yet</em>. A copy of rekordbox's database is saved before every sync. Tracks you drag into a mixarchive playlist yourself stay put.</p>
+        <img class="shot" src="img/gui_rekordbox.png" width="1280" height="860" loading="lazy" alt="The rekordbox tab: Preview sync and Sync to rekordbox buttons, tiles showing rekordbox closed, 3,214 tracks, 24 not analyzed, 0 missing files, then the mixarchive playlist sizes.">
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">5</span>
+      <div class="step-body">
+        <h3>Analyze</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>rekordbox</span><span class="pill need-open"><span class="dot"></span>rekordbox open</span></div>
+        <p>Open <em>mixarchive › Not analyzed yet</em>, press <kbd>Ctrl</kbd>+<kbd>A</kbd>, right-click › <em>Analyze Track</em>. Leave rekordbox open until it finishes. If you close it early, the next Sync shrinks the list to what's left.</p>
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">6</span>
+      <div class="step-body">
+        <h3>Put playlists on the stick</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>rekordbox</span><span class="pill need-open"><span class="dot"></span>rekordbox open</span></div>
+        <p>Plug in the stick. Export each playlist you want to it from rekordbox, and wait for the export to finish. mixarchive never writes to the stick; this step is rekordbox's.</p>
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">7</span>
+      <div class="step-body">
+        <h3>Eject and play</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>Windows</span></div>
+        <p>Close rekordbox, then right-click the stick in Explorer › <em>Eject</em>. On the player, browse a playlist or two and load a track to see its waveform and cues.</p>
+      </div>
+    </li>
+    <li class="step">
+      <span class="step-no">8</span>
+      <div class="step-body">
+        <h3>Back up</h3>
+        <div class="pills"><span class="pill"><span class="dot"></span>Terminal</span><span class="pill need-closed"><span class="dot"></span>rekordbox closed</span></div>
+        <p>Copy the library folder and rekordbox's folder to another drive. <span class="path">backup_library.bat</span> does both, and skips rekordbox's folder while rekordbox is open:</p>
+        <div class="cmd"><code>backup_library.bat "D:\DJ\Library" "B:\DJ Backup"</code><button class="copy" type="button" data-copy='backup_library.bat "D:\DJ\Library" "B:\DJ Backup"'>Copy</button></div>
+        <p class="note">It mirrors: files you delete from the library go from the backup too. So give it a backup folder that holds nothing else.</p>
+      </div>
+    </li>
+  </ol>
+
+  <h3>When something looks wrong</h3>
+  <div class="faq">
+    <div><h4>The GUI page says "forbidden"</h4><p>Open the address the terminal prints; it ends in <code>?t=</code> plus a code. A tab left over from an earlier GUI session won't work. A second GUI started while one is running opens on the next port.</p></div>
+    <div><h4>The Sync buttons are greyed out</h4><p>rekordbox is open. Close it, then press <em>Refresh</em> on the rekordbox tab.</p></div>
+    <div><h4>A mix is split in the wrong places</h4><p>Edit its tracklist in the collection's <span class="path">_mixarchive\tracklists\</span> folder, then Update and Sync. rekordbox keeps your cues on renamed files.</p></div>
+    <div><h4>A single has the wrong artist or title</h4><p>Edit <span class="path">_mixarchive\tracks.csv</span> (it opens in Excel), then Update and Sync.</p></div>
+    <div><h4>rekordbox shows missing files</h4><p>Old split names vanish after a re-split. Use <em>File › Display All Missing Files</em> and remove them.</p></div>
+    <div><h4>New collections land in the wrong folder</h4><p>New ones go next to the existing ones. Give <code>--root</code> on <code>add</code> to put one somewhere else, or <code>mixarchive move</code> to relocate it later.</p></div>
+    <div><h4>A playlist on the stick shows the wrong tracks</h4><p>In rekordbox's view of the stick, delete that playlist from the stick and export it again, then check it on the player.</p></div>
+    <div><h4>Downloads stop working</h4><p>YouTube changes now and then, and yt-dlp catches up. Update it with <code>venv\Scripts\python -m pip install -U yt-dlp</code>.</p></div>
+  </div>
+</section>
+
+<section id="where">
+  <div class="prose">
+    <h2>Where things live</h2>
+    <p>Each file has an owner. Problems start when two programs write the same file at once, which is why mixarchive waits for rekordbox to close.</p>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>What</th><th>Where (example)</th><th>Changed by</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td>mixarchive: code, environments, settings, logs</td><td><span class="path">C:\mixarchive</span></td><td>You (settings), mixarchive (logs)</td><td>No music here; reinstallable</td></tr>
+        <tr><td>Your collections</td><td><span class="path">D:\DJ\Library\mixarchive\</span></td><td>mixarchive (downloads, splits); you edit tracklists</td><td>Back it up; keep it off the USB stick</td></tr>
+        <tr><td>Your other music</td><td>anywhere, e.g. <span class="path">D:\DJ\Library\WAV</span></td><td>You; <code>files move</code></td><td><code>files status</code> shows where rekordbox plays from</td></tr>
+        <tr><td>rekordbox library: tracks, playlists, cues</td><td><span class="path">%APPDATA%\Pioneer\rekordbox\master.db</span></td><td>rekordbox; mixarchive Sync, <code>files</code> and <code>merge</code></td><td>mixarchive writes only while rekordbox is closed, after saving a copy</td></tr>
+        <tr><td>Analysis: waveforms, beat grids</td><td><span class="path">%APPDATA%\Pioneer\rekordbox\share</span></td><td>rekordbox (Analyze Track)</td><td>Only rekordbox can analyze</td></tr>
+        <tr><td>Copies of rekordbox's database</td><td><span class="path">D:\DJ\Library\_rekordbox backups</span></td><td>mixarchive, before each write</td><td>Last 10 of each kind kept</td></tr>
+        <tr><td>Stick databases and audio</td><td><span class="path">E:\PIONEER</span>, <span class="path">E:\Contents</span></td><td>rekordbox export</td><td>Nothing else touches them during an export</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>Inside a collection</h3>
+    <p>Every collection is one folder. The parts you edit are in <span class="path">_mixarchive</span>; everything else mixarchive rebuilds from them.</p>
+  </div>
+<pre class="block"><b>D:\DJ\Library\mixarchive\Harbour Lights\</b>
+  originals\              best YouTube audio, never re-encoded
+  _mixarchive\
+    collection.json       the collection's settings
+    tracklists\&lt;id&gt;.txt   one per mix: <b>edit to fix a split</b>
+    tracks.csv            one row per single: <b>edit to fix artist / title</b>
+    art\                  square covers
+  split\MP3 320\          the tracks rekordbox plays
+    &lt;Mix&gt;\NN - Artist - Title.mp3
+    _full mixes\          whole mixes, tracklist in the comments</pre>
+</section>
+
+<section id="safety">
+  <div class="prose">
+    <h2>Safety net</h2>
+    <p>Everything that writes to rekordbox saves a copy first. Each row says where the copy is and how to put it back.</p>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>If this went wrong</th><th>The copy is in</th><th>To undo</th></tr></thead>
+      <tbody>
+        <tr><td>A Sync into rekordbox</td><td><span class="path">_rekordbox backups\&lt;date&gt; rbsync</span></td><td>Close rekordbox; copy <code>master.db</code> and <code>masterPlaylists6.xml</code> back into <span class="path">%APPDATA%\Pioneer\rekordbox</span></td></tr>
+        <tr><td>A merge</td><td><span class="path">_rekordbox backups\&lt;date&gt; merge</span>, with <code>plan.csv</code></td><td>The same as for a Sync</td></tr>
+        <tr><td>A <code>files</code> move, relocate or FLAC run</td><td><span class="path">_rekordbox backups\&lt;date&gt; files-&lt;command&gt;\journal.csv</span></td><td><code>mixarchive files undo &lt;journal.csv&gt;</code></td></tr>
+        <tr><td>A lost or damaged music file</td><td>Your backup drive</td><td>Copy it back</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <h3>Five rules that keep it safe</h3>
+    <ul class="plain">
+      <li>Close rekordbox before a Sync, a <code>files</code> command, a merge or a backup of its folder. The GUI greys those buttons out while rekordbox is open.</li>
+      <li>Keep rekordbox open while it analyzes.</li>
+      <li>Keep your library off the USB stick and out of any copy of the stick. rekordbox's export files tracks into <span class="path">Contents\</span>, and the next copy of the stick would bring them back as second copies. If you do keep a copy of the stick, set <code>usb_mirror</code> in <span class="path">settings.json</span> so <code>files</code> flags tracks that play from it.</li>
+      <li>Keep FLAC off the stick if you play on older players such as the CDJ-400: they can't play it. WAV, AIFF and MP3 play everywhere.</li>
+      <li>Eject the stick in Windows before you unplug it.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="merges">
+  <div class="prose">
+    <h2>Merging playlists</h2>
+    <p>Say you built a playlist by hand for a label before mixarchive collected that label's channel. Now you have two playlists with many of the same songs, often as a lower-quality rip in yours. <code>mixarchive merge</code> folds one playlist into the other, keeps the best copy of each recording, and deletes the folded playlist. Its tracks stay in rekordbox's collection.</p>
+  </div>
+  <div class="cmd"><code>mixarchive.bat merge "Harbour Lights (old)" --into "mixarchive / Harbour Lights"</code><button class="copy" type="button" data-copy='mixarchive.bat merge "Harbour Lights (old)" --into "mixarchive / Harbour Lights"'>Copy</button></div>
+  <p class="note">Without <code>--apply</code> it only previews. The GUI's rekordbox tab has the same thing as a panel, with a second click to confirm.</p>
+  <img class="shot wide" src="img/gui_merge.png" width="1200" height="266" loading="lazy" alt="The Merge playlists panel on the rekordbox tab: Merge this playlist, into, a keep-the-merged-playlist checkbox, and Preview merge and Merge in rekordbox buttons.">
+
+  <h3>How it decides</h3>
+  <ol class="chips" aria-label="Merge steps">
+    <li><span class="chip">Find likely pairs<small>similar names, similar length</small></span></li>
+    <li><span class="chip">Listen<small>same recording if the audio correlates ≥ 0.85</small></span></li>
+    <li><span class="chip">Keep the best copy<small>WAV / AIFF › FLAC › higher bitrate</small></span></li>
+    <li><span class="chip">Move the cues<small>shifted by the measured offset</small></span></li>
+    <li><span class="chip">Delete the folded playlist<small>its tracks stay in the collection</small></span></li>
+  </ol>
+  <div class="callout">
+    <h4>Next to a mixarchive copy, yours stays only if it's better</h4>
+    <p>A track that Sync put in a mixarchive playlist always stays there. Your copy of the same recording stays beside it only if it's lossless or at least 320 kbps. So a bought WAV stays and a 128 kbps rip goes.</p>
+  </div>
+
+  <h3>An example preview</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Track in "Harbour Lights (old)"</th><th>Result</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Artist A – Song One (128 kbps rip)</td><td><span class="mark warn">→</span>left out</td><td>Same recording as mixarchive's 320 copy (correlation 0.97, 49 ms apart); its memory cue moves over</td></tr>
+        <tr><td>Artist B – Song Two (WAV, bought)</td><td><span class="mark ok">✓</span>kept</td><td>Lossless, better than mixarchive's MP3</td></tr>
+        <tr><td>Artist B – Song Two (320 MP3, bought)</td><td><span class="mark warn">→</span>left out</td><td>Your WAV of the same recording stays</td></tr>
+        <tr><td>Artist C – Live at the Pier (128 kbps)</td><td><span class="mark ok">✓</span>kept</td><td>mixarchive has no copy</td></tr>
+        <tr><td>Artist D – Song Three, listed twice</td><td><span class="mark warn">→</span>once</td><td>Repeats are dropped</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>What a merge touches</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Affected</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>Tracks in the collection</td><td><span class="mark ok">✓</span>None deleted. Copies that leave the playlist stay in the collection.</td></tr>
+        <tr><td>Play histories</td><td><span class="mark ok">✓</span>Intact, because no track leaves the collection.</td></tr>
+        <tr><td>Cues</td><td><span class="mark ok">✓</span>Copied onto the copy that stays, shifted by the measured audio offset. A hot cue pad that's already taken is reported, not overwritten.</td></tr>
+        <tr><td>mixarchive Sync</td><td><span class="mark ok">✓</span>Tracks merged into a mixarchive playlist stay there, after mixarchive's own, and new uploads keep arriving.</td></tr>
+        <tr><td>USB stick</td><td><span class="mark warn">!</span>Not changed. Export the merged playlist to the stick again, and delete the folded one from the stick in rekordbox.</td></tr>
+        <tr><td>Undo</td><td><span class="mark ok">✓</span>A copy of rekordbox's database and a <code>plan.csv</code> of every decision, in <span class="path">_rekordbox backups\&lt;date&gt; merge</span>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="good-to-know">
+  <div class="prose">
+    <h2>Good to know</h2>
+  </div>
+  <div class="later">
+    <div><h4>What it's tested on</h4><p>Windows 10 with rekordbox 7, exporting to an XDJ-1000MK2. Other setups may work, but haven't been tried.</p></div>
+    <div><h4>What it doesn't do</h4><p>It doesn't analyze tracks or write the USB stick: rekordbox does both. It doesn't delete tracks from rekordbox's collection.</p></div>
+    <div><h4>Not affiliated</h4><p>mixarchive is an independent project, not made or endorsed by AlphaTheta or Pioneer DJ. rekordbox, CDJ and XDJ are trademarks of their owners. It edits rekordbox's database with rekordbox closed and keeps a copy first, but keep your own backups too.</p></div>
+    <div><h4>Your music, your responsibility</h4><p>Download and play only what you have the right to. YouTube's terms limit downloading, and playing music in public needs the licences that apply where you play.</p></div>
+  </div>
+</section>
+
+<footer>
+  <span>mixarchive guide. The README next to this folder lists every command and option.</span>
+</footer>
+
+</main>
+
+<script>
+(function () {
+  // copy buttons
+  document.querySelectorAll(".copy").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var text = b.dataset.copy;
+      var done = function () { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1600); };
+      var fallback = function () {
+        var code = b.previousElementSibling, r = document.createRange();
+        r.selectNodeContents(code); var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        b.textContent = "Press Ctrl+C";
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+  });
+
+  // mark the section in view
+  var links = Array.prototype.slice.call(document.querySelectorAll(".rail nav a"));
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        links.forEach(function (a) { a.setAttribute("aria-current", a.getAttribute("href") === "#" + en.target.id ? "true" : "false"); });
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    links.forEach(function (a) { var s = document.querySelector(a.getAttribute("href")); if (s) io.observe(s); });
+  }
+})();
+</script>
