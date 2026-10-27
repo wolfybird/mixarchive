@@ -217,7 +217,7 @@ to the HLS copy of AAC 128k (format 234: same audio as 140, 16 kHz low-pass).
 | `run NAME` | everything above in order |
 | `add LINK... [--to NAME] [--label L] [--genre G] [--name N] [--root DIR] [--run]` | add channels / playlists (new collections) or videos (youtube-picks) |
 | `update [NAME...] [--no-rbsync]` | `run` for every collection (or those named), then `rbsync` if rekordbox is closed |
-| `files status \| audit \| verify \| relocate \| move \| flac \| undo \| flaccopy ...` | the files behind rekordbox's whole collection (below) |
+| `files status \| audit \| verify \| relocate \| move \| flac \| undo \| flaccopy \| silence ...` | the files behind rekordbox's whole collection (below) |
 | `gui [--port N]` | the browser GUI |
 | `list` | known collections |
 | `move NAME NEWROOT [--delete-old]` | relocate a collection (copy, check sizes, re-register) |
@@ -235,7 +235,10 @@ Close rekordbox, then `mixarchive rbsync`. It writes into rekordbox's own databa
 - a `mixarchive` playlist folder with one playlist per collection. Each holds the
   collection's splits (mix tracks + singles); a mix without a timed tracklist contributes
   its full-mix file instead, so a USB export never carries a mix alongside its own tracks.
-  MOD renders get their own playlist. Playlists are rewritten to match on every run, except
+  MOD renders get their own playlist. Two collection.json settings change that:
+  `"full_mixes": true` lists every mix by its full mix instead (for when its splits live in
+  playlists of your own), and `"mix_playlists": {"<mix>": "<playlist>"}` moves a mix to a
+  playlist of its own, its splits then its full mix. Playlists are rewritten to match on every run, except
   that tracks you dragged into one yourself stay (after the collection's own, in your order;
   rbsync remembers what it put there in `cache\rbsync_written.json` and only ever removes
   those). Other playlists, including your own inside that folder, are never touched
@@ -311,6 +314,20 @@ stick isn't touched: export the merged playlist again and delete the old one fro
 | `flac --to DIR [--layout ...]` | WAV / AIFF -> FLAC under DIR, rekordbox repointed (type FLAC, bitrate 0, new size, as rekordbox records FLACs). Each FLAC is decoded and compared sample for sample with its original first; tags + cover art come along, with rekordbox's title / artist / album / genre on top. Originals stay; 32-bit float files (FLAC can't hold them) are copied as they are. Older Pioneer players don't play FLAC: if you use them, keep WAV for rekordbox and use `flaccopy` for the backup instead |
 | `undo JOURNAL.csv [--keep]` | reverse a relocate / move / flac; `--keep` points rekordbox back at the originals but leaves the copies / FLACs |
 | `flaccopy --from DIR --to DIR` | keep `--to` a FLAC copy of the WAV / AIFF under `--from` (checked the same way; float files copied as they are; copies whose source is gone are deleted). Files only, rekordbox untouched - `backup_library.bat` runs it for `<library>\WAV` |
+| `silence [--min-gap S] [--list] [--csv PATH] [--jobs N] [--cues --apply]` | silent gaps inside tracks, such as dropouts in a rip (below) |
+
+`files silence` decodes each track (mono 8 kHz, ffmpeg, 8 at a time; about 4,000x realtime
+on a desktop) and measures its level every 0.1 s over 0.4 s. A gap is a stretch of
+`--min-gap` seconds (default 2) at least 30 dB under the track's typical level and under
+-35 dBFS, between where the music first gets within 10 dB of typical and where it last is,
+so quiet intros, fade-ins and endings don't count. Short blips inside a gap don't end it.
+A gap is **dropout-like** when the level falls 20 dB or more into it, or half of it is digital
+silence; otherwise it's a **quiet passage** (breakdowns, dub drops). Files over 15 minutes
+(mixes, tapes) and acapellas are reported apart. Results are cached in
+`cache\silence_scan.json`, so a re-run scans only new or changed files. With `--cues --apply`
+(rekordbox closed, master.db backed up first) it puts a memory cue named "gap N s" at each
+dropout-like gap at least 20 s from either end, so you see it on the deck; a gap that
+already has a memory cue within 1 s is skipped, so a re-run adds nothing twice.
 
 relocate / move / flac / undo only report until `--apply`, and write only with rekordbox
 closed. Cues, beat grids and analysis stay (pyrekordbox's `update_content_path` also rewrites

@@ -832,7 +832,7 @@ def cmd_files(a):
     cmd = [s["rbpython"], "-I", os.path.join(APP_DIR, "mixarchive", "rbfiles.py")] + (a.args or ["--help"])
     if a.args and a.args[0] not in ("-h", "--help"):
         cmd += [f"--backup-dir={_rb_backups()}", f"--ffmpeg={s['ffmpeg']}", f"--ffprobe={s['ffprobe']}",
-                f"--mirror={s['usb_mirror']}",
+                f"--mirror={s['usb_mirror']}", f"--cache={os.path.join(APP_DIR, 'cache', 'silence_scan.json')}",
                 f"--area=mixarchive={root}", f"--area=Library={os.path.dirname(root)}"]
     r = subprocess.run(cmd)
     if r.returncode:

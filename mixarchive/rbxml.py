@@ -44,25 +44,40 @@ def track_attrs(path):
 
 def collection_files(c, fmt="mp3"):
     """[(playlist name, [file paths])] for one collection: splits in manifest order, plus
-    full mixes of mixes without splits, plus MOD renders as their own playlist."""
+    full mixes of mixes without splits, plus MOD renders as their own playlist.
+    collection.json "full_mixes": true lists each mix by its full mix instead of its splits
+    (for when the splits live in playlists of your own); "mix_playlists": {mix: playlist}
+    gives those mixes a playlist of their own (their splits, then the full mix)."""
+    from .split import mix_folder
     base = os.path.join(c.out_root, FORMATS[fmt][0])
     manifest = os.path.join(base, "tracklist.csv")
-    files, split_mixes = [], set()
+    splits = []                                 # (mix folder (lower), file) in manifest order
     if os.path.exists(manifest):
         with open(manifest, encoding="utf-8-sig") as fh:
             for r in csv.DictReader(fh):
                 p = os.path.join(base, r["file"])
                 if os.path.exists(p):
-                    files.append(p)
-                    split_mixes.add(r["mix"].lower())
-    mains = os.path.join(base, "_full mixes")
-    if os.path.isdir(mains):
-        from .split import mix_folder
-        split_folders = {mix_folder(m).lower() for m in split_mixes}
-        for f in sorted(os.listdir(mains)):
-            if f.lower().endswith(FORMATS[fmt][1]) and os.path.splitext(f)[0].lower() not in split_folders:
-                files.append(os.path.join(mains, f))
-    out = [(c.config.get("playlist") or c.config.get("label") or c.name, files)]
+                    splits.append((mix_folder(r["mix"]).lower(), p))
+    mains_dir = os.path.join(base, "_full mixes")
+    mains = {os.path.splitext(f)[0].lower(): os.path.join(mains_dir, f)
+             for f in sorted(os.listdir(mains_dir)) if f.lower().endswith(FORMATS[fmt][1])
+             } if os.path.isdir(mains_dir) else {}
+    own = {mix_folder(m).lower(): name for m, name in (c.config.get("mix_playlists") or {}).items()}
+    full_only = c.config.get("full_mixes")
+    files, extra = [], {}
+    for mix, p in splits:
+        if mix in own:
+            extra.setdefault(own[mix], []).append(p)
+        else:
+            files.append(mains[mix] if full_only and mix in mains else p)
+    split_mixes = {m for m, _ in splits}
+    for mix, p in mains.items():
+        if mix in own:
+            extra.setdefault(own[mix], []).append(p)
+        elif mix not in split_mixes:
+            files.append(p)
+    out = [(c.config.get("playlist") or c.config.get("label") or c.name, list(dict.fromkeys(files)))]
+    out += list(extra.items())
     renders = os.path.join(c.out_root, "MOD renders")
     if os.path.isdir(renders):
         mods = [os.path.join(d, f) for d, _, fs in sorted(os.walk(renders)) for f in sorted(fs)
