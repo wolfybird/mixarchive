@@ -99,7 +99,17 @@ def safe(part):
     return part[:120] or "_"
 
 
+def existing(path):
+    """path, or its nearest parent that exists (a move target may not exist yet)."""
+    path = os.path.abspath(path)
+    while not os.path.exists(path):
+        path = os.path.dirname(path)
+    return path
+
+
 def same_drive(a, b):
+    if os.name != "nt":      # no drive letters: same filesystem = same device
+        return os.stat(existing(a)).st_dev == os.stat(existing(b)).st_dev
     return os.path.splitdrive(os.path.abspath(a))[0].lower() == os.path.splitdrive(os.path.abspath(b))[0].lower()
 
 
@@ -721,9 +731,10 @@ def print_plan(lib, plan, to):
 
 
 def check_room(size, to):
-    free = shutil.disk_usage(os.path.splitdrive(to)[0] + "\\").free
+    root = os.path.splitdrive(to)[0] + "\\" if os.name == "nt" else existing(to)
+    free = shutil.disk_usage(root).free
     if size > free:
-        raise SystemExit(f"  only {gb(free)} GB free on {os.path.splitdrive(to)[0]} - not enough")
+        raise SystemExit(f"  only {gb(free)} GB free on {root} - not enough")
 
 
 def cmd_move(lib, a):

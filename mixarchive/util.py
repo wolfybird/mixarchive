@@ -7,13 +7,14 @@ import unicodedata
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = "_mixarchive"          # per-collection state folder name
 AUDIO_EXTS = (".opus", ".m4a", ".mp3", ".flac", ".wav")
+BIN, EXE = ("Scripts", ".exe") if os.name == "nt" else ("bin", "")   # venv layout
 
 DEFAULTS = {
     "ffmpeg": "ffmpeg",            # on PATH, or a full path in settings.json
     "ffprobe": "ffprobe",
-    "openmpt123": os.path.join(APP_DIR, "tools", "openmpt", "openmpt123.exe"),
-    "ytdlp": os.path.join(APP_DIR, "venv", "Scripts", "yt-dlp.exe"),
-    "rbpython": os.path.join(APP_DIR, "rbvenv", "Scripts", "python.exe"),   # has pyrekordbox
+    "openmpt123": os.path.join(APP_DIR, "tools", "openmpt", "openmpt123" + EXE),
+    "ytdlp": os.path.join(APP_DIR, "venv", BIN, "yt-dlp" + EXE),
+    "rbpython": os.path.join(APP_DIR, "rbvenv", BIN, "python" + EXE),   # has pyrekordbox
     # robocopy backup of the Pioneer USB stick: tracks rekordbox plays from inside it are
     # flagged by `files audit` (a stick backup isn't a library); "" = none
     "usb_mirror": "",
@@ -65,6 +66,8 @@ def slug(s):
 
 def rekordbox_running():
     import subprocess
+    if os.name != "nt":
+        return subprocess.run(["pgrep", "-xq", "rekordbox"]).returncode == 0
     r = subprocess.run(["tasklist", "/FI", "IMAGENAME eq rekordbox.exe", "/NH"],
                        capture_output=True, text=True, errors="replace")
     return "rekordbox.exe" in r.stdout.lower()

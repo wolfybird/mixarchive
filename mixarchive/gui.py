@@ -9,6 +9,7 @@ import glob
 import json
 import os
 import secrets
+import signal
 import subprocess
 import sys
 import threading
@@ -25,7 +26,8 @@ from .util import APP_DIR, rekordbox_running
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
 COMMANDS = {"add", "update", "run", "resolve", "tracklists", "fetch", "art", "split", "status",
             "verify", "rbsync", "files", "merge", "list"}
-REKORDBOX_EXE = r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe"
+REKORDBOX_EXE = (r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe" if os.name == "nt"
+                 else "/Applications/rekordbox */rekordbox.app")
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
@@ -51,7 +53,7 @@ class Job:
                 [sys.executable, "-I", "-m", "mixarchive", *args], cwd=APP_DIR,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW,
-                env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1"))
+                start_new_session=os.name != "nt", env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1"))
             threading.Thread(target=self._pump, daemon=True).start()
             return True
 
@@ -64,6 +66,9 @@ class Job:
 
     def stop(self):
         if self.running:      # the whole tree: yt-dlp / ffmpeg / rbvenv children too
+            if os.name != "nt":   # the child leads its own process group (start_new_session)
+                os.killpg(self.proc.pid, signal.SIGKILL)
+                return
             subprocess.run(["taskkill", "/T", "/F", "/PID", str(self.proc.pid)],
                            capture_output=True, creationflags=NO_WINDOW)
 
@@ -150,8 +155,8 @@ def journals():
 def open_rekordbox():
     exes = sorted(glob.glob(REKORDBOX_EXE))
     if not exes:
-        raise RuntimeError("rekordbox.exe not found under C:\\Program Files\\Pioneer")
-    subprocess.Popen([exes[-1]], close_fds=True)
+        raise RuntimeError(f"rekordbox not found at {REKORDBOX_EXE}")
+    subprocess.Popen(([] if os.name == "nt" else ["open"]) + [exes[-1]], close_fds=True)
 
 
 def serve(port=8765, open_browser=True):
@@ -224,7 +229,11 @@ def serve(port=8765, open_browser=True):
                     if body.get("what") == "rekordbox":
                         open_rekordbox()
                     elif body.get("what") == "folder" and body.get("name") in library():
-                        os.startfile(library()[body["name"]])
+                        folder = library()[body["name"]]
+                        if os.name == "nt":
+                            os.startfile(folder)
+                        else:
+                            subprocess.Popen(["open", folder])
                     else:
                         return self._send(400, {"error": "can't open that"})
                 except Exception as e:

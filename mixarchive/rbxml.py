@@ -19,7 +19,7 @@ from .split import FORMATS
 
 
 def location(path):
-    return "file://localhost/" + urllib.parse.quote(os.path.abspath(path).replace("\\", "/"),
+    return "file://localhost/" + urllib.parse.quote(os.path.abspath(path).replace("\\", "/").lstrip("/"),
                                                     safe="/:")
 
 

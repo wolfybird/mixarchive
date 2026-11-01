@@ -5,7 +5,7 @@ import re
 import subprocess
 import time
 
-from .util import settings
+from .util import EXE, settings
 
 # Opus 251 is full-band (~20 kHz); AAC 140 is low-passed at ~16 kHz.
 AUDIO_FORMAT = "251/140/bestaudio"
@@ -40,7 +40,7 @@ def pot_server():
     modules = os.path.join(POT_HOME, "node_modules")
     if _pot_proc or not os.path.isdir(modules):
         return False
-    deno = os.path.join(os.path.dirname(settings()["ytdlp"]), "deno.exe")
+    deno = os.path.join(os.path.dirname(settings()["ytdlp"]), "deno" + EXE)
     # --allow-sys=ca + DENO_TLS_CA_STORE: the provider's HTTP client (axios) uses the Windows
     # certificate store, so a TLS-inspecting proxy whose root CA is only there still works
     _pot_proc = subprocess.Popen(
