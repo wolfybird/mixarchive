@@ -191,6 +191,12 @@ Single videos live in `collection.json` as `source.videos`.
 Mixes with any `--:--:--` line get only a full-mix file until every line has a time.
 `tracklists --force` refreshes the track lines but keeps your `@album/@album_artist/@year/@genre`.
 
+Channels that write titles in styled Unicode letters (`𝗟𝗢𝗦𝗧 𝗢𝗖𝗘𝗔𝗡 沈殿`) show up blank or
+as boxes on many DJ players. `"plain_titles": true` in collection.json makes new tracklists,
+files and tags use plain letters instead (`LOST OCEAN 沈殿`); accents and kanji are kept.
+Set it before a collection's first `split`: on one already split, the next `split` writes
+plain-named copies next to the old files.
+
 Where tracklists come from, best first: YouTube chapters -> timestamps in the description ->
 per-track **lengths** whose total matches the mix (CD listings, also borrowed from sibling
 uploads in the same collection, +-15 s and >=50% track overlap) -> timestamped top comments ->
