@@ -47,6 +47,18 @@ nav a.is-next sup { color: var(--hl); }
 @media (prefers-reduced-motion: reduce) { [data-np].running .no span { animation: none; } }
 .ch .btn { border-color: var(--white); color: var(--white); padding: 3px 10px; font-size: 12px; border-radius: 0; background: none; }
 .ch .btn:hover:not(:disabled) { background: var(--white); color: var(--black); }
+/* progress: step LEDs (like the keys' LEDs) in the NOW row + an orange hairline */
+.ptxt { font: 11.5px ui-monospace, Menlo, monospace; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+.leds { display: none; gap: 4px; } .leds.on { display: flex; }
+.leds .cell { width: 14px; height: 9px; border-radius: 2px; background: #2a2a2a; }
+.leds .cell.lit { background: var(--hl); box-shadow: 0 0 6px var(--hl); }
+.leds .cell.cur { background: color-mix(in srgb, var(--hl) calc(var(--f) * 100%), #2a2a2a); animation: blink 1.2s steps(2) infinite; }
+.pct { font: 800 15px "Arial Narrow", Arial, sans-serif; font-stretch: condensed; color: var(--hl); min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+.hair { height: 0; background: linear-gradient(90deg, var(--hl) calc(var(--p) * 1%), #2a2a2a 0); }
+.hair.on { height: 3px; }
+.hair.indet { background: repeating-linear-gradient(90deg, var(--hl) 0 24px, var(--black) 24px 48px); animation: march 1s linear infinite; }
+@keyframes march { to { background-position: 48px 0; } }
+@media (prefers-reduced-motion: reduce) { .leds .cell.cur, .hair.indet { animation: none; } }
 .ch .btn.go { background: var(--hl); border-color: var(--hl); color: #fff; }
 
 /* ---------- light instrument body */
@@ -161,11 +173,15 @@ pre#logOut { background: var(--black); color: #ddd; padding: 16px; min-height: 5
   <div class="ch" data-np>
     <div class="no"><span>NOW</span></div>
     <span class="ttl" data-np-title>Nothing running</span>
+    <span class="ptxt" data-prog-text></span>
     <span class="sub" data-np-sub></span>
+    <span class="leds" data-prog data-prog-cells="steps" title="Steps for this collection"></span>
+    <span class="pct" data-prog-pct></span>
     <span class="time" data-np-time>0:00</span>
     <button class="btn" data-go="output">Output</button>
     <button class="btn" data-np-stop disabled>Stop</button>
   </div>
+  <div class="hair" data-prog></div>
   <div class="ch next">
     <div class="no"><span>NEXT</span></div>
     <span class="ttl" data-next-title></span>
@@ -239,6 +255,6 @@ pre#logOut { background: var(--black); color: #ddd; padding: 16px; min-height: 5
   </section>
 </main>
 <div id="toast" hidden role="status"></div>
-<script>{ const s = document.createElement("script"); s.src = "/skin.js" + location.search; document.body.append(s); }</script>
+<script>for (const f of ["/progress.js", "/skin.js"]) { const s = document.createElement("script"); s.src = f + location.search; s.async = false; document.body.append(s); }</script>
 </body>
 </html>

@@ -142,6 +142,11 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
 .ctr .main { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ink); color: #000; display: grid; place-items: center; }
 .ctr .main svg { width: 16px; height: 16px; }
 .ctr .main:hover:not(:disabled) { transform: scale(1.06); }
+.bar.live i { background: var(--accent); }
+.ctr { position: relative; }
+.steps { display: flex; gap: 5px; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); }
+.steps i { width: 5px; height: 5px; border-radius: 50%; background: #4d4d52; }
+.steps i.done { background: var(--ink); } .steps i.cur { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
 .prog { display: flex; align-items: center; gap: 8px; width: 100%; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .bar { flex: 1; height: 4px; border-radius: 2px; background: #4d4d52; overflow: hidden; position: relative; }
 .bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ink); border-radius: 2px; }
@@ -248,7 +253,8 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     <div class="btns">
       <button class="main" id="npMain" aria-label="Update all"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg></button>
     </div>
-    <div class="prog"><span id="npT0">0:00</span><div class="bar" id="npBar"><i></i></div><span id="npT1">–</span></div>
+    <div class="prog"><span id="npT0">0:00</span><div class="bar" id="npBar" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i></i></div><span id="npT1">–</span></div>
+    <div class="steps" id="npSteps" aria-hidden="true"></div>
   </div>
   <div class="rt">
     <button class="icon" id="logBtn" aria-pressed="false" aria-label="Show output" title="Output"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
@@ -257,7 +263,7 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
 
 <div id="log" role="region" aria-label="Command output"><header><span id="logTitle">Output</span><span class="spacer"></span><button class="icon" id="logClose" aria-label="Close">✕</button></header><pre id="logOut"></pre></div>
 <div id="toast" hidden role="status"></div>
-
+<script>{ const s = document.createElement("script"); s.src = "/progress.js" + location.search; document.head.append(s); }</script>
 <script>
 (() => {
   const token = new URLSearchParams(location.search).get("t") || "";
@@ -402,14 +408,21 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     $("#npCover").setAttribute("style", "width:56px;" + coverCss(name || args[0] || "mixarchive"));
     $("#npCover").textContent = args[0] ? (name || "all").slice(0, 8) : "";
     $("#npTitle").textContent = args.length ? `${args[0]} · ${name || "all collections"}` : "Nothing running";
-    $("#npSub").textContent = s.running ? (last || "Starting…") : args.length ? (s.code === 0 ? "Finished" : `Stopped (exit ${s.code})`) : "Pick a collection and press play to update it";
+    // progress from the output (gui_progress.js): a real fill when there's a count, the sliding bar when not
+    const p = s.running && window.mxProgress ? window.mxProgress($("#logOut").textContent, args, S.cols.length) : null;
+    const pct = p && p.frac != null ? Math.round(p.frac * 100) : null;
+    const where = p ? [p.collections > 1 ? `${p.collection} ${p.collectionNo} of ${p.collections}` : p.collection, p.step + (p.count ? " " + p.count : "")].filter(Boolean).join(" · ") : "";
+    $("#npSub").textContent = s.running ? (where || last || "Starting…") : args.length ? (s.code === 0 ? "Finished" : `Stopped (exit ${s.code})`) : "Pick a collection and press play to update it";
     $("#logTitle").textContent = args.length ? "mixarchive " + args.join(" ") : "Output";
-    $("#npBar").classList.toggle("busy", !!s.running);
-    $("#npBar i").style.width = s.running ? "" : args.length ? "100%" : "0";
+    $("#npBar").classList.toggle("busy", !!s.running && pct == null);
+    $("#npBar").classList.toggle("live", pct != null);
+    $("#npBar i").style.width = pct != null ? pct + "%" : s.running ? "" : args.length ? "100%" : "0";
+    $("#npSteps").innerHTML = p && p.cells.length ? p.cells.map((f, i) => `<i class="${f >= 1 ? "done" : f > 0 ? "cur" : ""}" title="step ${i + 1}"></i>`).join("") : "";
+    $("#npBar").setAttribute("aria-valuenow", pct ?? "");
     clearInterval(tick);
     const upd = () => { $("#npT0").textContent = s.started ? clock(((s.ended || Date.now() / 1000) - s.started)) : "0:00"; };
     upd(); if (s.running) tick = setInterval(upd, 1000);
-    $("#npT1").textContent = s.running ? "live" : s.ended ? new Date(s.ended * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–";
+    $("#npT1").textContent = s.running ? (pct != null ? pct + "%" : "live") : s.ended ? new Date(s.ended * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–";
     const m = $("#npMain"); m.innerHTML = s.running ? STOP : PLAY;
     m.setAttribute("aria-label", s.running ? "Stop" : "Update all"); m.title = s.running ? "Stop" : "Update all collections";
     gate();

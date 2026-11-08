@@ -65,6 +65,7 @@ td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
 label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
 input[type=text], textarea, select { font: inherit; color: var(--ink); background: var(--bg);
   border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; width: 100%; }
+select.design { width: auto; padding: 3px 6px; }
 textarea { min-height: 96px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
 .checks { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 13px; }
@@ -86,6 +87,12 @@ kbd { font: 12px ui-monospace, Consolas, monospace; background: var(--chip); pad
 #console .bar code { color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 #console pre { margin: 0; padding: 8px 14px 14px; overflow: auto; flex: 1; font: 12px/1.45 ui-monospace, Consolas, monospace;
   white-space: pre-wrap; word-break: break-word; }
+#console .cprog { width: 160px; height: 6px; border-radius: 3px; background: #2f3237; overflow: hidden; position: relative; flex: none; }
+#console .cprog i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
+#console .cprog.indet i { width: 30% !important; animation: cslide 1.3s ease-in-out infinite; }
+@keyframes cslide { from { left: -30%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { #console .cprog.indet i { animation: none; } }
+#conProgText { color: var(--code-ink); white-space: nowrap; }
 #console .btn { background: transparent; color: var(--code-ink); border-color: #3a3d42; }
 #toast { position: fixed; top: 60px; right: 20px; max-width: min(420px, calc(100vw - 32px)); z-index: 7;
   background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--bad); border-radius: 8px;
@@ -282,6 +289,8 @@ kbd { font: 12px ui-monospace, Consolas, monospace; background: var(--chip); pad
   <div class="bar">
     <span class="pill" id="conState" style="background:rgba(255,255,255,.08)"><span class="dot"></span><span>idle</span></span>
     <code id="conCmd">No command run yet.</code>
+    <span class="small" id="conProgText"></span>
+    <span class="cprog" id="conProg" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" hidden><i></i></span>
     <button class="btn small" id="conStop" disabled>Stop</button>
     <button class="btn small" id="conToggle">Show</button>
   </div>
@@ -289,6 +298,7 @@ kbd { font: 12px ui-monospace, Consolas, monospace; background: var(--chip); pad
 </section>
 <div id="toast" role="alert" hidden></div>
 
+<script>{ const s = document.createElement("script"); s.src = "/progress.js" + location.search; document.head.append(s); }</script>
 <script>
 (() => {
   const token = new URLSearchParams(location.search).get("t") || "";
@@ -358,6 +368,15 @@ kbd { font: 12px ui-monospace, Consolas, monospace; background: var(--chip); pad
       el.querySelector("span:last-child").textContent = el.id === "jobPill" && s.args ? `${text}: ${s.args[0]}` : text;
     }
     $("#conStop").disabled = !s.running;
+    // progress, read from the output by gui_progress.js
+    const p = s.running && window.mxProgress ? window.mxProgress($("#conOut").textContent, s.args, (state.collections || []).length) : null;
+    const pct = p && p.frac != null ? Math.round(p.frac * 100) : null;
+    $("#conProg").hidden = !p;
+    $("#conProg").classList.toggle("indet", pct == null);
+    $("#conProg i").style.width = (pct ?? 0) + "%";
+    $("#conProg").setAttribute("aria-valuenow", pct ?? "");
+    $("#conProgText").textContent = p ? [p.collection && (p.collections > 1 ? `${p.collection} (${p.collectionNo}/${p.collections})` : p.collection),
+      p.stepNo ? `step ${p.stepNo}/${p.steps}` : "", p.step + (p.count ? " " + p.count : ""), pct != null ? pct + "%" : ""].filter(Boolean).join(" · ") : "";
     $$("[data-run],[data-files],[data-merge],#addBtn,#stepUpdate,#stepSync").forEach(b => b.dataset.busy = s.running ? "1" : "");
     gate();
   }

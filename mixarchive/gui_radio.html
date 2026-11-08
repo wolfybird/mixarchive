@@ -41,6 +41,17 @@ nav .is-next:not([aria-current]) { box-shadow: inset 0 -3px var(--hl); }
 @keyframes blink { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { [data-np].running .no span { animation: none; } }
 .ch .btn { padding: 4px 10px; font-size: 12px; }
+/* progress: white step blocks + a hairline under the header */
+.ptxt { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 38%; }
+.blocks { display: none; gap: 3px; } .blocks.on { display: flex; }
+.blocks .cell { width: 18px; height: 12px; border: 1px solid var(--ink); background: linear-gradient(90deg, var(--ink) calc(var(--f) * 100%), transparent 0); }
+.blocks .cell.cur { animation: blink 1.2s steps(2) infinite; }
+.pct { font-weight: 900; font-size: 15px; min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+.hair { height: 0; background: linear-gradient(90deg, var(--ink) calc(var(--p) * 1%), var(--dim) 0); }
+.hair.on { height: 3px; border-bottom: 1px solid var(--rule); }
+.hair.indet { background: repeating-linear-gradient(90deg, var(--ink) 0 24px, var(--bg) 24px 48px); background-size: 48px 100%; animation: march 1s linear infinite; }
+@keyframes march { to { background-position: 48px 0; } }
+@media (prefers-reduced-motion: reduce) { .blocks .cell.cur, .hair.indet { animation: none; } }
 
 /* building blocks */
 main { padding: 0 0 60px; }
@@ -151,11 +162,15 @@ pre#logOut { margin: 0 12px; border: 1px solid var(--rule); padding: 12px; min-h
   <div class="ch" data-np>
     <div class="no"><span>NOW</span></div>
     <span class="ttl cond" data-np-title>Nothing running</span>
+    <span class="ptxt cond" data-prog-text></span>
     <span class="sub" data-np-sub></span>
+    <span class="blocks" data-prog data-prog-cells="steps" title="Steps for this collection"></span>
+    <span class="pct cond" data-prog-pct></span>
     <span class="time" data-np-time>0:00</span>
     <button class="btn small" data-go="output">Output</button>
     <button class="btn small" data-np-stop disabled>Stop</button>
   </div>
+  <div class="hair" data-prog></div>
   <div class="ch">
     <div class="no"><span data-next-n>1</span></div>
     <span class="ttl cond" data-next-title>Next</span>
@@ -228,6 +243,6 @@ pre#logOut { margin: 0 12px; border: 1px solid var(--rule); padding: 12px; min-h
   </section>
 </main>
 <div id="toast" hidden role="status"></div>
-<script>{ const s = document.createElement("script"); s.src = "/skin.js" + location.search; document.body.append(s); }</script>
+<script>for (const f of ["/progress.js", "/skin.js"]) { const s = document.createElement("script"); s.src = f + location.search; s.async = false; document.body.append(s); }</script>
 </body>
 </html>

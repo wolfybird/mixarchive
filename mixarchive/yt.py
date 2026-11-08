@@ -62,16 +62,25 @@ def ffmpeg_location(s):
     return ["--ffmpeg-location", d] if d else []
 
 
-def _run(args, check=False, log=None):
-    """log: a file path to stream yt-dlp's output to (long batch runs)."""
+def _run(args, check=False, log=None, total=None):
+    """log: a file path to stream yt-dlp's output to (long batch runs); with total, a
+    "  i/total singles" line goes to stdout as each video starts (the GUI's progress bar)."""
     s = settings()
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     env["PATH"] = os.path.dirname(s["ytdlp"]) + os.pathsep + env.get("PATH", "")  # deno
     cmd = [s["ytdlp"], "--compat-options", "no-certifi"] + args
     if log:
         with open(log, "a", encoding="utf-8") as fh:
-            return subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, env=env,
-                                  stdin=subprocess.DEVNULL)
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env,
+                                 stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace")
+            n = 0
+            for line in p.stdout:
+                fh.write(line)
+                if total and "Extracting URL" in line:   # one per video in the batch file
+                    n = min(n + 1, total)
+                    print(f"    {n}/{total} singles", flush=True)
+            p.wait()
+            return p
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
                        errors="replace", env=env)
     if check and r.returncode:
@@ -210,7 +219,7 @@ def download_batch(video_ids, dest_dir, info_dir, log, fmt=AUDIO_FORMAT, client=
             "-a", todo]
     if client:
         args += ["--extractor-args", f"youtube:player_client={client}"]
-    return _run(args, log=log).returncode
+    return _run(args, log=log, total=len(video_ids)).returncode
 
 
 def stream_url(video_id, fmt="bv*[height<=720][vcodec^=avc1]"):

@@ -56,6 +56,20 @@ h2.t { font-size: 40px; font-weight: 300; letter-spacing: -1px; margin: 22px 0 6
 .screen button { background: none; border: 1px solid #555; color: #eaeaea; padding: 3px 10px; border-radius: 3px; font: inherit; }
 .screen button:hover:not(:disabled) { border-color: var(--hl); color: var(--hl); }
 [data-np].running .row1 [data-led] { background: var(--hl); box-shadow: 0 0 8px var(--hl); }
+/* progress: an LED segment meter, orange like the step LEDs */
+.led { display: none; grid-template-columns: repeat(32, 1fr); gap: 2px; position: relative; overflow: hidden; }
+.led.on { display: grid; }
+.led .cell { height: 9px; border-radius: 1.5px; background: #262626; }
+.led .cell.lit { background: var(--hl); box-shadow: 0 0 6px var(--hl); }
+.led .cell.cur { background: color-mix(in srgb, var(--hl) calc(var(--f) * 100%), #262626); }
+.led.indet::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 12.5%; background: var(--hl); box-shadow: 0 0 8px var(--hl); animation: sweep 1.4s steps(8) infinite; }
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(800%); } }
+@media (prefers-reduced-motion: reduce) { .led.indet::after { animation: none; } }
+.led-txt { color: #bdbdbd; } .led-txt [data-prog-pct] { color: var(--hl); }
+.mini { display: inline-flex; align-items: center; gap: 6px; }
+.mini .led { grid-template-columns: repeat(12, 6px); gap: 2px; } .mini .led.on { display: inline-grid; }
+.mini .led .cell { height: 8px; background: var(--rule); }
+.mini .led .cell.cur { background: color-mix(in srgb, var(--hl) calc(var(--f) * 100%), var(--rule)); }
 [data-led] { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #333; margin-right: 6px; }
 .keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; align-content: start; }
 .key { display: flex; flex-direction: column; gap: 10px; text-decoration: none; }
@@ -148,7 +162,7 @@ pre#logOut { background: var(--screen); color: #ddd; border-radius: 10px; paddin
     <a href="#" data-go="usb" data-step="usb"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="8" y="3" width="12" height="9"/><rect x="5" y="12" width="18" height="13" rx="2"/></svg><b>usb</b><span class="tiny">05 · to the stick<br><span data-count="usb"></span></span></a>
     <a href="#" data-go="output"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="5" width="22" height="18" rx="2"/><path d="M7 11l4 3-4 3M13 18h7"/></svg><b>output</b><span class="tiny">log of the<br>last command</span></a>
   </nav>
-  <div class="hdr-r tiny"><span data-rb></span><br><select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option><option value="/">classic</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></div>
+  <div class="hdr-r tiny"><span data-rb></span><br><span class="mini"><span class="led" data-prog data-prog-cells="12"></span> <span data-prog-pct></span></span><br><select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option><option value="/">classic</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></div>
 </header>
 
 <main>
@@ -158,6 +172,8 @@ pre#logOut { background: var(--screen); color: #ddd; border-radius: 10px; paddin
         <div class="row1"><span><span data-led></span>now</span><span data-np-time>0:00</span></div>
         <div class="big" data-np-title>Nothing running</div>
         <div class="ln" data-np-sub></div>
+        <div class="led" data-prog data-prog-cells="32"></div>
+        <div class="row1 led-txt"><span data-prog-text></span><span data-prog-pct></span></div>
         <div style="display:flex;gap:8px"><button data-go="output">output</button><button data-np-stop disabled>stop</button></div>
         <div class="nx"><div class="row1"><span>next · <span data-next-n></span>/5</span><span data-rb></span></div>
           <div><b data-next-title></b> — <span data-next-sub></span></div>
@@ -227,6 +243,6 @@ pre#logOut { background: var(--screen); color: #ddd; border-radius: 10px; paddin
   </section>
 </main>
 <div id="toast" hidden role="status"></div>
-<script>{ const s = document.createElement("script"); s.src = "/skin.js" + location.search; document.body.append(s); }</script>
+<script>for (const f of ["/progress.js", "/skin.js"]) { const s = document.createElement("script"); s.src = f + location.search; s.async = false; document.body.append(s); }</script>
 </body>
 </html>

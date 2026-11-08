@@ -27,7 +27,8 @@ PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
 # the classic page plus test UIs; they share the /api endpoints (and /skin.js for the workflow ones)
 PAGES = {"/": ("gui.html", "text/html"), "/music": ("gui_music.html", "text/html"),
          "/radio": ("gui_radio.html", "text/html"), "/panel": ("gui_panel.html", "text/html"),
-         "/hybrid": ("gui_hybrid.html", "text/html"), "/skin.js": ("gui_skin.js", "text/javascript")}
+         "/hybrid": ("gui_hybrid.html", "text/html"), "/skin.js": ("gui_skin.js", "text/javascript"),
+         "/progress.js": ("gui_progress.js", "text/javascript")}
 COMMANDS = {"add", "update", "run", "resolve", "tracklists", "fetch", "art", "split", "status",
             "verify", "rbsync", "files", "merge", "list"}
 REKORDBOX_EXE = (r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe" if os.name == "nt"
@@ -54,7 +55,8 @@ class Job:
             self.args, self.lines, self.code = args, [], None
             self.started, self.ended = time.time(), None
             self.proc = subprocess.Popen(
-                [sys.executable, "-I", "-m", "mixarchive", *args], cwd=APP_DIR,
+                # -u: -I ignores PYTHONUNBUFFERED, and without it output arrives in 8 KB chunks
+                [sys.executable, "-I", "-u", "-m", "mixarchive", *args], cwd=APP_DIR,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW,
                 start_new_session=os.name != "nt", env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1"))

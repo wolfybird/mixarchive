@@ -219,7 +219,33 @@
     clearInterval(tick);
     const upd = () => set("[data-np-time]", s.started ? clock((s.ended || Date.now() / 1000) - s.started) : "0:00");
     upd(); if (s.running) tick = setInterval(upd, 1000);
+    renderProgress(s, args, pre ? pre.textContent : "");
     if (wasRunning !== s.running) render();
+  }
+  // progress, drawn by each page's CSS:
+  //   [data-prog]              gets .on while running, .indet when there's no count, --p = 0..100
+  //   [data-prog-cells=steps]  one .cell per pipeline step, each with its own --f fill
+  //   [data-prog-cells=N]      N .cell LEDs lit up to the overall percentage
+  //   [data-prog-text], [data-prog-pct], [data-prog-step]
+  function renderProgress(s, args, text) {
+    const p = s.running && window.mxProgress ? window.mxProgress(text, args, S.cols.length) : null;
+    const pct = p && p.frac != null ? Math.round(p.frac * 100) : null;
+    $$("[data-prog]").forEach(e => {
+      e.classList.toggle("on", !!p); e.classList.toggle("indet", !!p && pct == null);
+      e.style.setProperty("--p", pct ?? 0);
+      e.setAttribute("role", "progressbar"); e.setAttribute("aria-label", "Progress");
+      pct == null ? e.removeAttribute("aria-valuenow") : e.setAttribute("aria-valuenow", pct);
+    });
+    $$("[data-prog-cells]").forEach(e => {
+      const n = e.dataset.progCells;
+      const fills = !p ? [] : n === "steps" ? p.cells : Array.from({ length: +n }, (_, i) => pct == null ? 0 : Math.max(0, Math.min(1, pct / 100 * +n - i)));
+      if (e.children.length !== fills.length) e.innerHTML = fills.map(() => `<i class="cell"></i>`).join("");
+      fills.forEach((f, i) => { e.children[i].style.setProperty("--f", f); e.children[i].classList.toggle("lit", f >= 1); e.children[i].classList.toggle("cur", f > 0 && f < 1); });
+    });
+    const where = p ? [p.collections > 1 ? `${p.collection} (${p.collectionNo}/${p.collections})` : p.collection, p.stepNo ? `step ${p.stepNo}/${p.steps}` : ""].filter(Boolean).join(" · ") : "";
+    set("[data-prog-step]", esc(p ? p.step + (p.count ? " " + p.count : "") : ""));
+    set("[data-prog-text]", esc(p ? [where, p.step + (p.count ? " " + p.count : "")].filter(Boolean).join(" · ") : ""));
+    set("[data-prog-pct]", p ? (pct == null ? "…" : pct + "%") : "");
   }
   $$("[data-np-stop]").forEach(b => b.addEventListener("click", async () => { try { renderJob(await api("/api/stop", {})); } catch (e) { say(e.message); } }));
   function gate() {   // one command at a time; writes to rekordbox only while it's closed
