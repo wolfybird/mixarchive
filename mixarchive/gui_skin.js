@@ -258,7 +258,8 @@
     $$("[data-run], #addBtn").forEach(b => {
       const writes = (b.dataset.run || "").includes('"rbsync"');
       b.disabled = busy || (writes && S.rbOpen);
-      b.title = writes && S.rbOpen ? "Close rekordbox first" : busy ? "Another command is running" : (b.title || "");
+      if (b.dataset.title === undefined) b.dataset.title = b.title;   // its own tooltip, restored once free
+      b.title = writes && S.rbOpen ? "Close rekordbox first" : busy ? "Another command is running" : b.dataset.title;
     });
   }
   $$("[data-sync-btn]").forEach(b => b.dataset.run = JSON.stringify(["rbsync"]));

@@ -44,7 +44,7 @@ aside { grid-area: side; display: flex; flex-direction: column; gap: 8px; min-he
 /* covers: generated from the name, there's no art per collection yet */
 .cover { aspect-ratio: 1; border-radius: 6px; flex: none; display: grid; place-items: end start; padding: 10%;
   font-weight: 800; color: rgba(255,255,255,.92); letter-spacing: -.5px; overflow: hidden; position: relative;
-  box-shadow: 0 8px 24px rgba(0,0,0,.45); word-break: break-all; line-height: 1.05; }
+  box-shadow: 0 8px 24px rgba(0,0,0,.45); word-break: normal; overflow-wrap: anywhere; line-height: 1.05; }
 .cover::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 80% 15%, rgba(255,255,255,.25), transparent 55%); }
 .cover.sm { width: 48px; font-size: 11px; border-radius: 4px; box-shadow: none; padding: 6px; }
 
@@ -121,7 +121,7 @@ table.tracks { width: 100%; border-collapse: collapse; font-size: 14px; }
 .search { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
 .search textarea, .search input { width: 100%; background: var(--panel2); border: 2px solid transparent; color: var(--ink);
   border-radius: 12px; padding: 14px 16px; font: inherit; font-size: 15px; }
-.search textarea { min-height: 130px; resize: vertical; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13.5px; }
+.search textarea { min-height: 130px; resize: vertical; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13.5px; }
 .search textarea:focus, .search input:focus { outline: none; border-color: var(--ink); }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .row input { flex: 1; min-width: 160px; }
@@ -163,7 +163,7 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
   transform: translateY(20px); opacity: 0; pointer-events: none; transition: .2s; }
 #log.on { transform: none; opacity: 1; pointer-events: auto; }
 #log header { display: flex; align-items: center; padding: 12px 16px; font-weight: 700; }
-#log pre { flex: 1; margin: 0; padding: 0 16px 16px; overflow: auto; font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; color: #d6d6db; white-space: pre-wrap; }
+#log pre { flex: 1; margin: 0; padding: 0 16px 16px; overflow: auto; font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: #d6d6db; white-space: pre-wrap; }
 #toast { position: fixed; left: 50%; bottom: 104px; transform: translateX(-50%); background: var(--ink); color: #000; font-weight: 600;
   padding: 10px 18px; border-radius: 8px; z-index: 20; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 .muted { color: var(--muted); }
@@ -356,7 +356,7 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
       <div class="actions">
         <button class="play" data-run="update" data-name="${esc(c.name)}" aria-label="Update ${esc(c.name)}" title="Update: new uploads → download → split">${PLAY}</button>
         <button class="ghost" data-run="status" data-name="${esc(c.name)}">Status</button>
-        <button class="ghost" data-open="${esc(c.name)}">Show in Finder</button>
+        <button class="ghost" data-open="${esc(c.name)}">${/Mac/.test(navigator.userAgent) ? "Show in Finder" : "Show folder"}</button>
       </div>
       <div class="pad"><table class="tracks"><thead><tr><th class="r">#</th><th>Title</th><th class="r">Tracks</th><th class="r">Size</th></tr></thead>
         <tbody>${rows.map((r, i) => `<tr><td class="n">${i + 1}</td><td class="title">${r.raw ? r.t : esc(r.t)}<div class="s">${r.s}</div></td><td class="r">${r.a}</td><td class="r">${r.b}</td></tr>`).join("")}</tbody></table>
@@ -441,7 +441,8 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     $$("[data-run], #addBtn").forEach(b => {
       const writes = b.hasAttribute("data-writes");
       b.disabled = busy || (writes && S.rbOpen);
-      b.title = writes && S.rbOpen ? "Close rekordbox first" : busy ? "Another command is running" : b.title;
+      if (b.dataset.title === undefined) b.dataset.title = b.title;   // its own tooltip, restored once free
+      b.title = writes && S.rbOpen ? "Close rekordbox first" : busy ? "Another command is running" : b.dataset.title;
     });
   }
 

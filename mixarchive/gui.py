@@ -24,7 +24,10 @@ from .collection import Collection, library, library_root
 from .util import APP_DIR, rekordbox_running
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
-# the classic page plus test UIs; they share the /api endpoints (and /skin.js for the workflow ones)
+# the GUI's designs (hybrid is the default; "/" is the classic page, which has the skins); they
+# share the /api endpoints, and radio / panel / hybrid share skin.js
+DEFAULT_PAGE = "hybrid"
+PAGE_NAMES = {"hybrid": "/hybrid", "radio": "/radio", "panel": "/panel", "music": "/music", "classic": "/"}
 PAGES = {"/": ("gui.html", "text/html"), "/music": ("gui_music.html", "text/html"),
          "/radio": ("gui_radio.html", "text/html"), "/panel": ("gui_panel.html", "text/html"),
          "/hybrid": ("gui_hybrid.html", "text/html"), "/skin.js": ("gui_skin.js", "text/javascript"),
@@ -73,7 +76,10 @@ class Job:
     def stop(self):
         if self.running:      # the whole tree: yt-dlp / ffmpeg / rbvenv children too
             if os.name != "nt":   # the child leads its own process group (start_new_session)
-                os.killpg(self.proc.pid, signal.SIGKILL)
+                try:
+                    os.killpg(self.proc.pid, signal.SIGKILL)
+                except ProcessLookupError:   # it ended between the check and the kill
+                    pass
                 return
             subprocess.run(["taskkill", "/T", "/F", "/PID", str(self.proc.pid)],
                            capture_output=True, creationflags=NO_WINDOW)
@@ -266,9 +272,20 @@ def make_server(port=8765):
     return server, f"http://127.0.0.1:{port}/?t={token}", job
 
 
-def serve(port=8765, open_browser=True):
+def page_path(page):
+    """"radio", "/radio" or "classic" -> its path in PAGES. Only the last part counts, so a
+    path Git Bash rewrote ("/radio" -> "C:/Program Files/Git/radio") still works."""
+    name = page.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].lower() or "classic"
+    if name not in PAGE_NAMES:
+        raise SystemExit(f"no such page: {page} (one of {', '.join(PAGE_NAMES)})")
+    return PAGE_NAMES[name]
+
+
+def serve(port=8765, open_browser=True, page=DEFAULT_PAGE):
     """`mixarchive gui`: the GUI in the browser."""
+    page = page_path(page)
     server, address, job = make_server(port)
+    address = address.replace("/?t=", f"{page}?t=", 1)
     print(f"mixarchive GUI: {address}\n(keep this window open while you use it; Ctrl+C stops it)", flush=True)
     if open_browser:
         webbrowser.open(address)
@@ -280,13 +297,12 @@ def serve(port=8765, open_browser=True):
         job.stop()
 
 
-def window(port=8765, page="/"):
+def window(port=8765, page=DEFAULT_PAGE):
     """`mixarchive app`: the same GUI in a window of its own (pywebview: WebView2 on Windows,
     WebKit on macOS). Closing the window stops the server; while a command runs it stays open
     and the page says why (Stop first), so a long fetch doesn't die from a stray click.
-    page: which design to open on (a key of PAGES, e.g. "/hybrid")."""
-    if page not in PAGES or page.endswith(".js"):
-        raise SystemExit(f"no such page: {page} (one of {', '.join(p for p in PAGES if not p.endswith('.js'))})")
+    page: which design to open on (see page_path)."""
+    page = page_path(page)      # before anything starts
     try:
         import webview
     except ImportError:

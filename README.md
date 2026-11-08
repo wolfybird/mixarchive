@@ -30,41 +30,66 @@ then export the playlists you want to the USB stick. `update` leaves rekordbox a
 it's open (it says so) - close it and run `mixarchive rbsync`.
 
 `mixarchive` here means `mixarchive.bat` in the install folder (or
-`venv\Scripts\python -I -m mixarchive`).
+`venv\Scripts\python -I -m mixarchive`); on macOS, `./mixarchive.sh`.
 
 ## GUI
 
-`mixarchive gui` opens the same workflow in the browser (served on 127.0.0.1 only; the
-address carries a random token, so other pages can't drive it - keep its window open while
-you use it). Tabs: **Collections** (status, Update per collection or all, open folder),
-**Add sources** (paste links; shows what each becomes), **rekordbox** (open/closed, tracks
-left to analyze, mixarchive playlist sizes, Preview sync / Sync, Open rekordbox, Merge
-playlists) and **Library files** (the `files` tool below). It runs the CLI's own commands
-one at a time, with their output in the panel at the bottom; anything that writes to
-rekordbox is disabled while rekordbox is open, and moves need a second click to confirm.
+`mixarchive gui` opens the workflow in the browser (served on 127.0.0.1 only; the address
+carries a random token, so other pages can't drive it - keep its window open while you use
+it). `mixarchive app` opens it in a window of its own instead (pywebview: Edge WebView2 on
+Windows, WebKit on macOS; install it with `venv\Scripts\python -m pip install -e .[app]`).
+The window won't close while a command is running - press Stop first.
 
-`mixarchive app` opens the same GUI in a window of its own instead of the browser
-(pywebview: Edge WebView2 on Windows, WebKit on macOS; install it with
-`venv\Scripts\python -m pip install -e .[app]`). The window won't close while a command is
-running - press Stop first. For a double-click start without a console, make a shortcut to
-`venv\Scripts\pythonw.exe -I -m mixarchive app` with the install folder as "Start in".
+Both open on **hybrid**. The **Design** menu at the top switches between the designs, and
+`--page NAME` opens on another one:
 
-Both pick a **skin** in the header, kept between runs: **Bare** (the default: black and
-white with one acid accent, light or dark with the system), **Burrow** (wood cheeks, candy
-keys, a small OLED readout), **Field** (grey panel, numbered keys, a green LCD) and
-**Classic** (the original look). `?skin=NAME` in the address overrides it for one visit.
+| design | |
+|---|---|
+| `hybrid` (default) | the radio header over the panel body |
+| `radio` | black, thin rules, condensed caps; NOW and NEXT rows under the menu |
+| `panel` | light grey, lowercase; the five steps as hardware-style keys beside a status screen |
+| `music` | dark sidebar, album-style collection cards, the running command in a player bar |
+| `classic` | the original tabbed page, with skins (below) |
+
+Hybrid, radio and panel are built around the pipeline: **1 Add, 2 Update, 3 Sync,
+4 Analyze, 5 USB**, each with a live count, and *Next* points at the first step with work
+waiting ("Update · 5 mixes to fetch", "Sync · close rekordbox first"). The classic page's
+tabs are **Collections**, **Add sources**, **rekordbox** (including Merge playlists) and
+**Library files** (the `files` tool below); merging and the files tool are only there for
+now.
+
+Every design runs the CLI's own commands one at a time, with their output alongside;
+anything that writes to rekordbox is disabled while rekordbox is open. While a command runs,
+a progress bar shows the collection, the step and its count, with an estimate of the time
+left once the step reports a count.
+
+The classic page picks a **skin** in its header, kept between runs: **Bare** (the default:
+black and white with one acid accent, light or dark with the system), **Burrow** (wood
+cheeks, candy keys, a small OLED readout), **Field** (grey panel, numbered keys, a green
+LCD) and **Classic** (the original look). `?skin=NAME` in the address overrides it for one
+visit.
+
+To start the window with a double-click:
+- **Windows:** make a shortcut to `venv\Scripts\pythonw.exe -I -m mixarchive app` with the
+  install folder as "Start in" (pythonw: no console window).
+- **macOS:** `./make_mac_app.sh` builds `~/Applications/mixarchive.app`, which runs this
+  folder's venv, so code changes need no rebuild (rebuild it if you move the folder). It
+  opens on hybrid; `./make_mac_app.sh radio` picks another design.
 
 ## Setup
 
 1. Python 3.10+ for mixarchive itself:
-   `py -3 -m venv venv` then `venv\Scripts\python -m pip install -e .`
+   `py -3 -m venv venv` then `venv\Scripts\python -m pip install -e .` (add `[app]` for
+   `mixarchive app`). On macOS: `python3 -m venv venv` then
+   `venv/bin/python -m pip install -e ".[app]"`; paths below that say `venv\Scripts\` are
+   `venv/bin/` there.
 2. A second environment for everything that touches rekordbox's database (`rbsync`,
    `files`, `merge`), because pyrekordbox's SQLCipher wheels need a newer Python:
    `py -3.14 -m venv rbvenv` then
    `rbvenv\Scripts\python -m pip install pyrekordbox==0.5.0 mutagen pillow`.
    `mixarchive\rbdb.py`, `rbfiles.py` and `rbmerge.py` run there and import nothing from the
    rest of the package.
-3. ffmpeg, on PATH or named in `settings.json`.
+3. ffmpeg, on PATH or named in `settings.json` (macOS: `brew install ffmpeg`).
 4. Copy `settings.example.json` to `settings.json` and adjust it. Every key is optional:
 
    | key | default | |
@@ -235,8 +260,8 @@ to the HLS copy of AAC 128k (format 234: same audio as 140, 16 kHz low-pass).
 | `add LINK... [--to NAME] [--label L] [--genre G] [--name N] [--root DIR] [--run]` | add channels / playlists (new collections) or videos (youtube-picks) |
 | `update [NAME...] [--no-rbsync]` | `run` for every collection (or those named), then `rbsync` if rekordbox is closed |
 | `files status \| audit \| verify \| relocate \| move \| flac \| undo \| flaccopy \| silence ...` | the files behind rekordbox's whole collection (below) |
-| `gui [--port N]` | the browser GUI |
-| `app [--port N]` | the same GUI in a window of its own (needs the `app` extra: pywebview) |
+| `gui [--port N] [--page NAME]` | the browser GUI (design: hybrid, radio, panel, music or classic) |
+| `app [--port N] [--page NAME]` | the same GUI in a window of its own (needs the `app` extra: pywebview) |
 | `list` | known collections |
 | `move NAME NEWROOT [--delete-old]` | relocate a collection (copy, check sizes, re-register) |
 | `rbsync [NAME...] [--dry-run]` | put tracks + playlists straight into rekordbox's database (rekordbox closed); default: all collections |
