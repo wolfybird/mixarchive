@@ -3,7 +3,7 @@
 import os
 import re
 
-from .util import STATE, load_json, safe_name, save_json, settings
+from .util import STATE, load_json, safe_name, save_json, save_setting, settings
 
 DEFAULT_CONFIG = {
     # {"playlists": [url, ...], "videos": [id, ...]} (playlists or channel /videos pages, and
@@ -107,16 +107,27 @@ def library():
 
 
 def library_root():
-    """The folder holding every collection (new ones go here)."""
+    """The folder holding every collection (new ones go here). With none yet: settings'
+    library_root, else Music\\mixarchive in the user's home folder."""
+    if settings()["library_root"]:
+        return settings()["library_root"]
     roots = list(library().values())
+    if not roots:
+        return os.path.join(os.path.expanduser("~"), "Music", "mixarchive")
     try:
         return os.path.commonpath(roots) if len(roots) > 1 else os.path.dirname(roots[0])
-    except (ValueError, IndexError):    # none yet, or on several drives: the first one's
-        return os.path.dirname(roots[0]) if roots else os.getcwd()
+    except ValueError:    # on several drives: the first one's
+        return os.path.dirname(roots[0])
 
 
 def register(name, root):
     lib = library()
+    if not lib and not settings()["library_root"]:
+        # a new library: keep its folder, so a first collection in a subfolder (labels\...)
+        # doesn't become the place the next ones go; one given --root elsewhere sets it
+        default, where = library_root(), os.path.abspath(root)
+        inside = os.path.normcase(where).startswith(os.path.normcase(os.path.join(default, "")))
+        save_setting("library_root", default if inside else os.path.dirname(where))
     lib[name] = os.path.abspath(root)
     save_json(settings()["library"], lib)
 

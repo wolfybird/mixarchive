@@ -15,7 +15,45 @@ are and how to undo things. This README is the reference.
 > terms limit downloading, and playing music in public needs the licences that apply where
 > you play.
 
-Built and tested on Windows 10 with rekordbox 7.
+Built and tested on Windows 10 with rekordbox 7; runs on macOS too.
+
+## Install
+
+You need Python 3.10 or newer ([python.org](https://www.python.org/downloads/), or
+`winget install Python.Python.3.14` on Windows) and ffmpeg (`winget install ffmpeg` on
+Windows, `brew install ffmpeg` on macOS). Then, in a terminal:
+
+```
+python -m pip install --user pipx
+python -m pipx ensurepath
+```
+
+open a new terminal (so the commands are on PATH), and:
+
+```
+pipx install "mixarchive[app,rekordbox]"
+mixarchive-app
+```
+
+`mixarchive-app` opens mixarchive in a window of its own (see [GUI](#gui)); `mixarchive`
+is the command line. pipx gives mixarchive an environment of its own; `pip install` into
+any virtual environment works too. The extras: `app` is the window (pywebview), and
+`rekordbox` is what writes to rekordbox's database: `rbsync`, `files` and `merge`
+(pyrekordbox). Without them you still get the command line and `mixarchive gui` in the
+browser.
+
+Until the first release is on PyPI, install from GitHub instead:
+`pipx install "mixarchive[app,rekordbox] @ git+https://github.com/wolfybird/mixarchive"`.
+
+Your collections go in `Music\mixarchive` in your home folder unless you pick another
+**music folder** before adding the first one (on the Add screen, or `library_root` in
+`settings.json`). mixarchive's own files - settings, the list of collections, caches - are in
+`%APPDATA%\mixarchive` on Windows, `~/Library/Application Support/mixarchive` on macOS and
+`~/.local/share/mixarchive` on Linux; set `MIXARCHIVE_HOME` to use another folder.
+
+**Updating:** `pipx upgrade mixarchive`. When YouTube changes something and downloads
+start failing, a newer yt-dlp is usually the fix, before a new mixarchive is out:
+`pipx runpip mixarchive install -U yt-dlp`.
 
 ## Day to day
 
@@ -29,16 +67,16 @@ then in rekordbox: *mixarchive › Not analyzed yet*, Ctrl+A, right-click › An
 then export the playlists you want to the USB stick. `update` leaves rekordbox alone while
 it's open (it says so) - close it and run `mixarchive rbsync`.
 
-`mixarchive` here means `mixarchive.bat` in the install folder (or
-`venv\Scripts\python -I -m mixarchive`); on macOS, `./mixarchive.sh`.
+`mixarchive` here is the command pip installs; in a clone (below) it's `mixarchive.bat`
+(or `venv\Scripts\python -I -m mixarchive`), on macOS `./mixarchive.sh`.
 
 ## GUI
 
 `mixarchive gui` opens the workflow in the browser (served on 127.0.0.1 only; the address
 carries a random token, so other pages can't drive it - keep its window open while you use
-it). `mixarchive app` opens it in a window of its own instead (pywebview: Edge WebView2 on
-Windows, WebKit on macOS; install it with `venv\Scripts\python -m pip install -e .[app]`).
-The window won't close while a command is running - press Stop first.
+it). `mixarchive app` (or `mixarchive-app`) opens it in a window of its own instead
+(pywebview, from the `app` extra: Edge WebView2 on Windows, WebKit on macOS). The window
+won't close while a command is running - press Stop first.
 
 Both open on **hybrid**. The **Design** menu at the top switches between the designs, and
 `--page NAME` opens on another one:
@@ -70,45 +108,47 @@ LCD) and **Classic** (the original look). `?skin=NAME` in the address overrides 
 visit.
 
 To start the window with a double-click:
-- **Windows:** make a shortcut to `venv\Scripts\pythonw.exe -I -m mixarchive app` with the
-  install folder as "Start in" (pythonw: no console window).
-- **macOS:** `./make_mac_app.sh` builds `~/Applications/mixarchive.app`, which runs this
-  folder's venv, so code changes need no rebuild (rebuild it if you move the folder). It
-  opens on hybrid; `./make_mac_app.sh radio` picks another design.
+- **Windows:** `mixarchive-app.exe` starts it without a console window. pipx puts it in
+  `%USERPROFILE%\.local\bin`, a clone in `venv\Scripts`; make a desktop or Start menu
+  shortcut to it.
+- **macOS, from a clone:** `./make_mac_app.sh` builds `~/Applications/mixarchive.app`,
+  which runs the clone's venv, so code changes need no rebuild (rebuild it if you move the
+  folder). It opens on hybrid; `./make_mac_app.sh radio` picks another design.
 
-## Setup
+## Setup from a clone
 
-1. Python 3.10+ for mixarchive itself:
-   `py -3 -m venv venv` then `venv\Scripts\python -m pip install -e .` (add `[app]` for
-   `mixarchive app`). On macOS: `python3 -m venv venv` then
-   `venv/bin/python -m pip install -e ".[app]"`; paths below that say `venv\Scripts\` are
-   `venv/bin/` there.
-2. A second environment for everything that touches rekordbox's database (`rbsync`,
-   `files`, `merge`), because pyrekordbox's SQLCipher wheels need a newer Python:
-   `py -3.14 -m venv rbvenv` then
-   `rbvenv\Scripts\python -m pip install pyrekordbox==0.5.0 mutagen pillow`.
-   `mixarchive\rbdb.py`, `rbfiles.py` and `rbmerge.py` run there and import nothing from the
-   rest of the package.
-3. ffmpeg, on PATH or named in `settings.json` (macOS: `brew install ffmpeg`).
-4. Copy `settings.example.json` to `settings.json` and adjust it. Every key is optional:
+For working on mixarchive itself, or running it from a folder of its own:
+
+1. Python 3.10+:
+   `py -3 -m venv venv` then `venv\Scripts\python -m pip install -e ".[app,rekordbox]"`.
+   On macOS: `python3 -m venv venv` then `venv/bin/python -m pip install -e ".[app,rekordbox]"`;
+   paths below that say `venv\Scripts\` are `venv/bin/` there.
+2. ffmpeg, as in [Install](#install).
+3. Copy `settings.example.json` to `settings.json` next to the code. With a `settings.json`
+   or `library.json` there, mixarchive keeps its own files in the clone instead of the
+   app-data folder. Every key is optional:
 
    | key | default | |
    |---|---|---|
-   | `ffmpeg`, `ffprobe` | `ffmpeg`, `ffprobe` (on PATH) | full paths if they aren't on PATH |
-   | `ytdlp` | `venv\Scripts\yt-dlp.exe` | |
-   | `rbpython` | `rbvenv\Scripts\python.exe` | the Python with pyrekordbox |
+   | `ffmpeg`, `ffprobe` | on PATH, or where winget / Homebrew put them | full paths if they're elsewhere |
+   | `ytdlp` | the yt-dlp installed with mixarchive | |
+   | `rbpython` | `rbvenv\Scripts\python.exe` if there is one, else mixarchive's own Python | the Python with pyrekordbox |
+   | `library_root` | `Music\mixarchive` in your home folder | where a new library's collections go |
    | `usb_mirror` | none | a backup copy of your USB stick, if you keep one: `files` flags tracks rekordbox plays from inside it |
    | `openmpt123` | `tools\openmpt\openmpt123.exe` | only for MOD renders |
    | `library` | `library.json` | the list of collections (written by `add` / `init`) |
 
-5. The first collection decides where the library lives: give it `--root`, e.g.
+   An `rbvenv` (a second environment with pyrekordbox, from when it needed a newer Python
+   than the rest) is still used if it's there; a new setup doesn't need one.
+4. The first collection decides where the library lives: by default `library_root`, or give
+   it `--root`, e.g.
    `mixarchive add https://www.youtube.com/@somelabel --label "Some Label" --root "D:\DJ\Library\mixarchive\Some Label"`.
    Later collections go next to it (label collections in a `labels\` folder beside it).
 
 yt-dlp needs deno for YouTube's JavaScript (installed with the package). Some videos
 answer 403 unless the request carries a PO token; see yt-dlp's
 [PO Token Guide](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide). If a bgutil
-provider is installed in `tools\bgutil-ytdlp-pot-provider` (see that project's own
+provider is installed in `tools\bgutil-ytdlp-pot-provider` in mixarchive's own folder (see that project's own
 instructions), mixarchive starts it on 127.0.0.1 when a download needs one. Videos YouTube
 age-restricts need a signed-in account; mixarchive never signs in, so they're left out.
 
@@ -273,7 +313,7 @@ All steps skip finished work; `--force` redoes it, `--only a,b` limits to matchi
 ## Into rekordbox and onto the USB
 
 Close rekordbox, then `mixarchive rbsync`. It writes into rekordbox's own database
-(`%APPDATA%\Pioneer\rekordbox\master.db`, via pyrekordbox in `rbvenv`):
+(`%APPDATA%\Pioneer\rekordbox\master.db`, via pyrekordbox):
 
 - a `mixarchive` playlist folder with one playlist per collection. Each holds the
   collection's splits (mix tracks + singles); a mix without a timed tracklist contributes
@@ -319,7 +359,7 @@ mixarchive never writes to the USB stick; rekordbox's export does.
 ## Merging playlists (`merge`)
 
 `mixarchive merge "Some Label (old)" --into "mixarchive / Some Label"` (or the rekordbox tab
-of the GUI) merges one rekordbox playlist into another (rbmerge.py, in rbvenv like rbsync).
+of the GUI) merges one rekordbox playlist into another (rbmerge.py, with pyrekordbox like rbsync).
 Name a playlist by its name, or by its path with ` / ` when the name is used twice.
 
 - the target keeps its tracks in its order; the source's follow in theirs; a track listed
@@ -344,7 +384,7 @@ stick isn't touched: export the merged playlist again and delete the old one fro
 ## rekordbox's files (`files`)
 
 `mixarchive files COMMAND` works on rekordbox's whole collection, not only mixarchive's
-(rbfiles.py, in rbvenv like rbsync). Filters for every command: `--ext wav,aif,aiff`,
+(rbfiles.py, with pyrekordbox like rbsync). Filters for every command: `--ext wav,aif,aiff`,
 `--under DIR`, `--playlist NAME` (a folder includes what's below it), `--missing`.
 
 | command | does |

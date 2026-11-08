@@ -5,7 +5,7 @@ import re
 import subprocess
 import time
 
-from .util import EXE, settings
+from .util import APP_DIR, EXE, settings
 
 # Opus 251 is full-band (~20 kHz); AAC 140 is low-passed at ~16 kHz.
 AUDIO_FORMAT = "251/140/bestaudio"
@@ -15,7 +15,7 @@ AUDIO_FORMAT = "251/140/bestaudio"
 # copy of AAC 140 is the last resort: same audio as 140, 16 kHz low-pass.
 POT_CLIENT = "mweb"
 HLS_FORMAT = "234/233"
-POT_HOME = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+POT_HOME = os.path.join(APP_DIR,
                         "tools", "bgutil-ytdlp-pot-provider", "server")
 POT_URL = "http://127.0.0.1:4416/ping"
 _pot_proc = None

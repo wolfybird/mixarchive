@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import rbxml, singles
 from .collection import Collection, library, library_root
-from .util import APP_DIR, rekordbox_running
+from .util import APP_DIR, rekordbox_running, save_setting
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
 # the GUI's designs (hybrid is the default; "/" is the classic page, which has the skins); they
@@ -173,6 +173,7 @@ def open_rekordbox():
 
 def make_server(port=8765):
     """The GUI's server on the first free port from `port` -> (server, address, job)."""
+    os.makedirs(APP_DIR, exist_ok=True)      # commands run in it; new on a fresh install
     token = secrets.token_urlsafe(18)
     rb = RekordboxStatus()
     job = Job(on_done=lambda args: rb.refresh() if args and args[0] in ("rbsync", "files", "update", "merge") else None)
@@ -238,6 +239,14 @@ def make_server(port=8765):
             if url.path == "/api/stop":
                 job.stop()
                 return self._send(200, job.state(len(job.lines)))
+            if url.path == "/api/settings":      # first run: where the music goes
+                root = body.get("library_root")
+                if library() or not isinstance(root, str) or not os.path.isabs(root.strip()):
+                    return self._send(400, {"error": "a full folder path, before the first collection"})
+                if os.path.isfile(root.strip()):
+                    return self._send(400, {"error": "that's a file, not a folder"})
+                save_setting("library_root", os.path.normpath(root.strip()))
+                return self._send(200, {"library_root": library_root()})
             if url.path == "/api/open":
                 try:
                     if body.get("what") == "rekordbox":

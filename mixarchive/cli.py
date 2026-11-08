@@ -37,7 +37,8 @@ from . import art, modland, singles, tracklist, yt
 from .collection import Collection, known_video_ids, library, library_root, open_collection, register
 from .split import (FORMATS, TAGGERS, export, gain_db, get_cover, measured, mix_folder,
                     plan, read_image, split_mix, track_name, write_manifest)
-from .util import AUDIO_EXTS, load_json, mmss, norm, plain_letters, rekordbox_running, safe_name, slug
+from .util import (AUDIO_EXTS, load_json, mmss, norm, plain_letters, rekordbox_running, require_ffmpeg,
+                   safe_name, slug)
 
 PICKS = "youtube-picks"      # where `add` puts single videos given no --to
 
@@ -814,7 +815,8 @@ def cmd_rbsync(a):
     `mixarchive` folder, refreshed on every run. rekordbox must be closed."""
     import subprocess
     from . import rbxml
-    from .util import APP_DIR, save_json, settings
+    from .util import APP_DIR, PKG_DIR, require_pyrekordbox, save_json, settings
+    require_pyrekordbox()
     lib = library()
     playlists = []
     for n in a.collections or list(lib):
@@ -825,7 +827,7 @@ def cmd_rbsync(a):
                           for name, files in playlists if files]}
     path = os.path.join(APP_DIR, "cache", "rbsync_plan.json")
     save_json(path, plan)
-    cmd = [settings()["rbpython"], "-I", os.path.join(APP_DIR, "mixarchive", "rbdb.py"), path]
+    cmd = [settings()["rbpython"], "-I", os.path.join(PKG_DIR, "rbdb.py"), path]
     r = subprocess.run(cmd + ([] if a.dry_run else ["--apply"]))
     if r.returncode:
         raise SystemExit(r.returncode)
@@ -839,9 +841,10 @@ def cmd_files(a):
     """Check / relocate / move the files behind rekordbox's whole collection (rbfiles.py,
     run with rbvenv's Python like rbsync). `mixarchive files` alone prints its help."""
     import subprocess
-    from .util import APP_DIR, settings
+    from .util import APP_DIR, PKG_DIR, require_pyrekordbox, settings
+    require_pyrekordbox()
     s, root = settings(), library_root()
-    cmd = [s["rbpython"], "-I", os.path.join(APP_DIR, "mixarchive", "rbfiles.py")] + (a.args or ["--help"])
+    cmd = [s["rbpython"], "-I", os.path.join(PKG_DIR, "rbfiles.py")] + (a.args or ["--help"])
     if a.args and a.args[0] not in ("-h", "--help"):
         cmd += [f"--backup-dir={_rb_backups()}", f"--ffmpeg={s['ffmpeg']}", f"--ffprobe={s['ffprobe']}",
                 f"--mirror={s['usb_mirror']}", f"--cache={os.path.join(APP_DIR, 'cache', 'silence_scan.json')}",
@@ -856,9 +859,10 @@ def cmd_merge(a):
     rbsync): copies of the same recording are found by ear, the best stays (WAV first), the
     others' cues move onto it, and the merged playlist is deleted. rekordbox must be closed."""
     import subprocess
-    from .util import APP_DIR, settings
+    from .util import APP_DIR, PKG_DIR, require_pyrekordbox, settings
+    require_pyrekordbox()
     s = settings()
-    cmd = [s["rbpython"], "-I", os.path.join(APP_DIR, "mixarchive", "rbmerge.py"), a.source, a.into,
+    cmd = [s["rbpython"], "-I", os.path.join(PKG_DIR, "rbmerge.py"), a.source, a.into,
            f"--backup-dir={_rb_backups()}", f"--ffmpeg={s['ffmpeg']}",
            f"--written={os.path.join(APP_DIR, 'cache', 'rbsync_written.json')}", f"--root={library_root()}"]
     r = subprocess.run(cmd + (["--apply"] if a.apply else []) + (["--keep-source"] if a.keep_source else []))
@@ -1176,7 +1180,15 @@ def main(argv=None):
     if argv[:1] == ["files"]:      # the rest (incl. --help) belongs to rbfiles.py
         return cmd_files(argparse.Namespace(args=argv[1:]))
     a = ap.parse_args(argv)
+    if a.fn in (cmd_run, cmd_update, cmd_fetch, cmd_art, cmd_split, cmd_verify, cmd_merge) or (
+            a.fn is cmd_add and a.run):
+        require_ffmpeg()          # say how to get it, instead of a traceback halfway through
     a.fn(a)
+
+
+def app_main():
+    """`mixarchive-app`: the window, from a launcher pip makes without a console (Windows)."""
+    main(["app", *sys.argv[1:]])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,68 @@
+# Builds the package and installs it the way a new user would (a fresh environment, every
+# extra, nothing from the checkout), then checks it runs: on Windows, macOS and Linux, on
+# the oldest and newest Python it supports.
+name: build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        python: ["3.10", "3.14"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Build the sdist and wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Install the wheel with every extra into a new environment
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/env"
+          if [ "$RUNNER_OS" = Windows ]; then bin="$RUNNER_TEMP/env/Scripts"; else bin="$RUNNER_TEMP/env/bin"; fi
+          echo "BIN=$bin" >> "$GITHUB_ENV"
+          wheel=$(ls dist/*.whl)
+          "$bin/python" -m pip install "${wheel}[app,rekordbox]"
+      - name: Run it from outside the checkout
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$BIN/mixarchive" --help > /dev/null
+          "$BIN/mixarchive" list
+          "$BIN/python" -I - <<'EOF'
+          import os, sys, urllib.request, threading
+          import mixarchive
+          from mixarchive.util import APP_DIR, settings
+          from mixarchive import gui
+          pkg = os.path.dirname(mixarchive.__file__)
+          s = settings()
+          print("data folder:", APP_DIR)
+          print("yt-dlp:", s["ytdlp"])
+          print("rekordbox python:", s["rbpython"])
+          assert pkg not in APP_DIR, "data folder inside the package"
+          assert os.path.isfile(s["ytdlp"]), "yt-dlp not found next to Python"
+          assert s["rbpython"] == sys.executable
+          for f in ("gui.html", "gui_hybrid.html", "gui_skin.js", "gui_progress.js", "rbdb.py", "rbfiles.py", "rbmerge.py"):
+              assert os.path.isfile(os.path.join(pkg, f)), f + " missing from the package"
+          import pyrekordbox, webview
+          server, address, job = gui.make_server(8799)
+          threading.Thread(target=server.serve_forever, daemon=True).start()
+          for page in ("hybrid", "classic", "music"):
+              url = address.replace("/?t=", gui.page_path(page) + "?t=", 1)
+              assert urllib.request.urlopen(url).status == 200, page
+          server.shutdown()
+          print("ok")
+          EOF

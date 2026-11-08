@@ -1,20 +1,38 @@
 [project]
 name = "mixarchive"
-version = "0.1.0"
+version = "0.2.0"
 description = "Archive YouTube channels and long mixes as tagged tracks, and sync them into rekordbox for CDJ/XDJ"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
+keywords = ["youtube", "rekordbox", "dj", "mixes", "tracklists", "yt-dlp", "cdj", "xdj"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio",
+]
 dependencies = ["yt-dlp[default]", "deno", "mutagen", "pillow"]
 
 [project.optional-dependencies]
-app = ["pywebview>=6"]      # `mixarchive app`: the GUI in a window of its own
+app = ["pywebview>=6"]              # `mixarchive app` / `mixarchive-app`: the GUI in a window of its own
+rekordbox = ["pyrekordbox==0.5.0"]  # rbsync, files, merge: rekordbox's database
+
+[project.urls]
+Homepage = "https://github.com/wolfybird/mixarchive"
+Issues = "https://github.com/wolfybird/mixarchive/issues"
 
 [project.scripts]
 mixarchive = "mixarchive.cli:main"
 
+[project.gui-scripts]
+mixarchive-app = "mixarchive.cli:app_main"   # no console window on Windows
+
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
