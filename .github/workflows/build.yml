@@ -1,6 +1,7 @@
-# Builds the package and installs it the way a new user would (a fresh environment, every
-# extra, nothing from the checkout), then checks it runs: on Windows, macOS and Linux, on
-# the oldest and newest Python it supports.
+# Builds the package and installs it the way a new user would (a fresh environment, no
+# extras, nothing from the checkout), then checks it runs: on Windows, macOS and Linux, on
+# the oldest and newest Python it supports. On Python 3.10, pip must refuse it and a clone
+# run must say to upgrade.
 name: build
 
 on:
@@ -48,7 +49,7 @@ jobs:
           "$BIN/python" -I - <<'EOF'
           import os, sys, urllib.request, threading
           import mixarchive
-          from mixarchive.util import APP_DIR, settings
+          from mixarchive.util import APP_DIR, EXE, reinstall_hint, settings
           from mixarchive import gui
           pkg = os.path.dirname(mixarchive.__file__)
           s = settings()
@@ -63,7 +64,8 @@ jobs:
           import importlib.util
           import mutagen, numpy, PIL, pyrekordbox, webview, yt_dlp      # every dependency, no extras
           assert importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http"), "PO token plugin missing"
-          assert os.path.isfile(os.path.join(os.path.dirname(s["ytdlp"]), "deno" + (".exe" if os.name == "nt" else ""))), "deno missing"
+          assert os.path.isfile(os.path.join(os.path.dirname(s["ytdlp"]), "deno" + EXE)), "deno missing"
+          assert reinstall_hint().endswith("-m pip install mixarchive"), reinstall_hint()   # a plain pip venv
           server, address, job = gui.make_server(8799)
           threading.Thread(target=server.serve_forever, daemon=True).start()
           for page in ("hybrid", "classic", "music"):
@@ -72,3 +74,21 @@ jobs:
           server.shutdown()
           print("ok")
           EOF
+
+  old-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: pip refuses it on 3.10, and running a clone says to upgrade
+        run: |
+          python -m pip install --upgrade build
+          python -m build --wheel
+          if python -m pip install dist/*.whl > pip.log 2>&1; then cat pip.log; exit 1; fi
+          # old pips name whichever Requires-Python they hit first (this one's, or pyrekordbox's)
+          grep -qiE "requires-python|requires a different python" pip.log || { cat pip.log; exit 1; }
+          if python -m mixarchive --help > run.log 2>&1; then cat run.log; exit 1; fi
+          grep -q "needs Python 3.11 or newer" run.log || { cat run.log; exit 1; }
+          cat run.log

@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import rbxml, singles
 from .collection import Collection, library, library_root
-from .util import APP_DIR, NO_WINDOW, console_python, rekordbox_running, save_setting
+from .util import APP_DIR, NO_WINDOW, console_python, reinstall_hint, rekordbox_running, save_setting
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
 # the GUI's designs (hybrid is the default; "/" is the classic page, which has the skins); they
@@ -331,9 +331,8 @@ def window(port=8765, page=DEFAULT_PAGE):
     try:
         import webview
     except ImportError:
-        raise SystemExit("The window needs pywebview, which comes with mixarchive: reinstall it (pipx "
-                         "reinstall mixarchive, or pip install --force-reinstall mixarchive). "
-                         "`mixarchive gui` opens it in the browser meanwhile.")
+        raise SystemExit(f"The window needs pywebview, which comes with mixarchive; put it back with: "
+                         f"{reinstall_hint()}\n(Meanwhile `mixarchive gui` opens it in the browser.)")
 
     server, address, job = make_server(port)
     stop_job_on_signals(job)

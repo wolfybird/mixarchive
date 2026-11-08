@@ -19,9 +19,10 @@ Built and tested on Windows 10 with rekordbox 7; runs on macOS too.
 
 ## Install
 
-You need Python 3.11 or newer ([python.org](https://www.python.org/downloads/), or
-`winget install Python.Python.3.14` on Windows) and ffmpeg (`winget install ffmpeg` on
-Windows, `brew install ffmpeg` on macOS). Then, in a terminal:
+You need Python 3.11 or newer (`python --version` shows yours; get one from
+[python.org](https://www.python.org/downloads/), `winget install Python.Python.3.14` on Windows
+or `brew install python@3.14` on macOS) and ffmpeg (`winget install ffmpeg` on Windows,
+`brew install ffmpeg` on macOS). Then, in a terminal:
 
 ```
 python -m pip install --user pipx
@@ -37,9 +38,23 @@ mixarchive-app
 
 `mixarchive-app` opens mixarchive in a window of its own (see [GUI](#gui)); `mixarchive`
 is the command line. pipx gives mixarchive an environment of its own; `pip install
-mixarchive` into any virtual environment works too. Either way it brings everything
-mixarchive uses: yt-dlp and deno for downloads, pyrekordbox for rekordbox's database,
-pywebview for the window, mutagen, Pillow and numpy. Only ffmpeg (above) is separate.
+mixarchive` into any virtual environment works too. Either way it brings every Python
+package mixarchive uses (the list is in `pyproject.toml`): yt-dlp and deno for downloads,
+pyrekordbox for rekordbox's database, pywebview for the window, and the libraries for tags,
+cover art and audio checks. What isn't a Python package comes separately: ffmpeg (above)
+and, only for the uploads YouTube refuses without a PO token, the provider server that the
+included yt-dlp plugin talks to (see the PO token note in [Setup from a clone](#setup-from-a-clone)).
+
+**On an older Python** (3.10 or before), pip and pipx stop with `Could not find a version
+that satisfies the requirement mixarchive`, after a line ending in `Requires-Python >=3.11`.
+Install a newer Python as above and run the commands again in a new terminal, or let pipx
+fetch one just for mixarchive, leaving your other Python as it is:
+
+```
+pipx install --python 3.14 --fetch-python missing mixarchive
+```
+
+(Older pipx versions call that option `--fetch-missing-python`.)
 
 The newest code that isn't released yet installs from GitHub:
 `pipx install "git+https://github.com/wolfybird/mixarchive"`.

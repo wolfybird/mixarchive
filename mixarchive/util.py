@@ -159,10 +159,22 @@ def has_pyrekordbox():
     return settings()["rbpython"] != console_python() or importlib.util.find_spec("pyrekordbox") is not None
 
 
+def reinstall_hint():
+    """The command that puts back a package mixarchive comes with, for how it's installed:
+    a clone's editable install (pip install -e, never the PyPI copy over it), pipx, or pip."""
+    py = console_python()
+    checkout = os.path.dirname(PKG_DIR)
+    if os.path.isfile(os.path.join(checkout, "pyproject.toml")):
+        return f'"{py}" -m pip install -e "{checkout}"'
+    if os.path.isfile(os.path.join(sys.prefix, "pipx_metadata.json")):
+        return "pipx reinstall mixarchive"
+    return f'"{py}" -m pip install mixarchive'      # installs whatever it's missing
+
+
 def require_pyrekordbox():
     if not has_pyrekordbox():
-        raise SystemExit("this needs pyrekordbox, which comes with mixarchive: reinstall it "
-                         "(pipx reinstall mixarchive, or pip install --force-reinstall mixarchive)")
+        raise SystemExit(f"this needs pyrekordbox, which comes with mixarchive; put it back with: "
+                         f"{reinstall_hint()}")
 
 
 def load_json(path, default=None):

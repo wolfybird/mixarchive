@@ -1,7 +1,7 @@
 #!/bin/sh
 # Builds ~/Applications/mixarchive.app: a launcher that opens the GUI in its own window.
 # It runs this folder's venv, so code changes need no rebuild. Rebuild if you move the folder.
-# Needs pywebview in the venv: pip install -e ".[app]" (or uv pip install --python venv/bin/python pywebview)
+# Needs this folder's venv with mixarchive in it: python3 -m venv venv && venv/bin/python -m pip install -e .
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PAGE="${1:-/hybrid}"        # start page: /hybrid, /radio, /panel, /music or /
