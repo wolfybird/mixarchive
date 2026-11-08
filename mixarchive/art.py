@@ -125,13 +125,19 @@ def grab_frames(video_id, items, offset, dest_dir, prefix):
     return out
 
 
+def _font(size):
+    for f in ("C:/Windows/Fonts/arialbd.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf"):
+        try:
+            return ImageFont.truetype(f, size)
+        except OSError:
+            pass
+    return ImageFont.load_default()
+
+
 def badge(src_path, dst_path, text="MOD RENDER"):
     im = Image.open(src_path).convert("RGB").resize((SIZE, SIZE))
     d = ImageDraw.Draw(im)
-    try:
-        font = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 40)
-    except OSError:
-        font = ImageFont.load_default()
+    font = _font(40)
     w = d.textlength(text, font=font)
     d.rectangle([SIZE - w - 36, SIZE - 68, SIZE - 8, SIZE - 8], fill=(230, 40, 120))
     d.text((SIZE - w - 22, SIZE - 64), text, fill="white", font=font)
@@ -140,7 +146,7 @@ def badge(src_path, dst_path, text="MOD RENDER"):
 
 def contact_sheet(items, path, cols=10, cell=160):
     """items: [(label, image path)] -> one review sheet."""
-    font = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 16)
+    font = _font(16)
     rows = max(1, (len(items) + cols - 1) // cols)
     sheet = Image.new("RGB", (cols * cell, rows * cell), "gray")
     for i, (label, p) in enumerate(items):

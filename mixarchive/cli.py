@@ -369,10 +369,11 @@ def cmd_fetch(a):
     # whose file each original is: a file another mix already has is never adopted or
     # downloaded over, even when the two titles normalize the same
     owner = {os.path.normcase(os.path.basename(s["original"])): s["key"] for s in c.sources if s.get("original")}
-    for s in _selected(c, a):
-        vid = s.get("video_id")
-        if not vid or (c.original(s) and os.path.exists(c.original(s)) and not a.force):
-            continue
+    todo = [s for s in _selected(c, a) if s.get("video_id")
+            and not (c.original(s) and os.path.exists(c.original(s)) and not a.force)]
+    for i, s in enumerate(todo, 1):
+        vid = s["video_id"]
+        print(f"  {i}/{len(todo)} mixes")     # the GUI's progress bar reads these
         hdr = tracklist.read(c.tracklist_path(vid))[0] if os.path.exists(c.tracklist_path(vid)) else {}
         name = safe_name(hdr.get("album") or s.get("title") or vid)
         wanted = {norm(name), norm(s.get("title"))}
@@ -497,8 +498,9 @@ def cmd_split(a):
                                      art_dir=c.p("art"), mains=c.config["mains"],
                                      dry_run=a.dry_run, norm=c.config.get("normalize")))
                    for fmt, mix, tracks, orig in jobs]
-        for fmt, fut in futures:
+        for i, (fmt, fut) in enumerate(futures, 1):
             rows[fmt] += fut.result()
+            print(f"  {i}/{len(futures)} mixes split")
     if not a.dry_run:
         for fmt, r in rows.items():
             if r:
@@ -577,8 +579,8 @@ def _split_singles(c, a, fmt):
           f"{FORMATS[fmt][0]}\\{folder}")
     with ThreadPoolExecutor(max_workers=a.jobs) as pool:
         for i, _ in enumerate(pool.map(export_one, jobs), 1):
-            if i % 100 == 0:
-                print(f"   {i}/{len(jobs)}")
+            if i % 10 == 0 or i == len(jobs):
+                print(f"   {i}/{len(jobs)} singles exported")
     if rows or drop:
         write_manifest(c.out_root, fmt, rows, drop_ids=drop)
 
@@ -995,7 +997,7 @@ def cmd_gui(a):
 
 def cmd_app(a):
     from . import gui
-    gui.window(a.port)
+    gui.window(a.port, a.page)
 
 
 def cmd_move(a):
@@ -1162,6 +1164,7 @@ def main(argv=None):
 
     p = sub.add_parser("app", help="open the GUI in a window of its own (needs pywebview)")
     p.add_argument("--port", type=int, default=8765)
+    p.add_argument("--page", default="/", help="design to open on: / (classic), /hybrid, /radio, /panel or /music")
     p.set_defaults(fn=cmd_app)
 
     for stream in (sys.stdout, sys.stderr):     # titles with emoji / math letters on cp1252

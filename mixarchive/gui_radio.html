@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mixarchive</title>
+<!-- Test UI: radio-station style (black, thin rules, condensed caps). Logic: gui_skin.js. Served at /radio. -->
+<style>
+:root { --bg: #000; --ink: #fff; --muted: #9a9a9a; --rule: #fff; --dim: #3a3a3a; --hl: #ff3b30; --good: #3ddc84; --warn: #ffcc00; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.cond, h1, h2, h3, nav a, .btn, .tag, .eyebrow, th { font-family: "Helvetica Neue Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif; font-stretch: condensed; text-transform: uppercase; letter-spacing: .2px; }
+a { color: inherit; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { opacity: .35; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--hl); outline-offset: 2px; }
+.muted { color: var(--muted); } .small { font-size: 12px; } .hl { color: var(--hl); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 7px; }
+.dot.good { background: var(--good); } .dot.warn { background: var(--warn); }
+
+/* header + the two "channel" rows */
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+.bar { display: flex; align-items: stretch; border-bottom: 1px solid var(--rule); min-height: 40px; }
+.logo { display: grid; place-items: center; width: 40px; border-right: 1px solid var(--rule); text-decoration: none; }
+.logo span { border: 2px solid var(--ink); font: italic 900 12px/1 "Arial Narrow", Arial, sans-serif; padding: 3px 3px 2px; letter-spacing: -.5px; }
+nav { display: flex; flex-wrap: wrap; align-items: center; padding: 0 6px; flex: 1; }
+nav a { text-decoration: none; padding: 10px 9px; font-weight: 700; font-size: 14px; white-space: nowrap; }
+nav a sup { font-size: 10px; margin-right: 3px; color: var(--muted); }
+nav a[aria-current] { background: var(--ink); color: var(--bg); }
+nav a[aria-current] sup { color: var(--bg); }
+nav .is-next:not([aria-current]) { box-shadow: inset 0 -3px var(--hl); }
+.right { display: flex; align-items: center; gap: 14px; padding: 0 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+.ch { display: flex; align-items: center; gap: 12px; padding: 0 12px 0 0; border-bottom: 1px solid var(--rule); min-height: 34px; }
+.ch .no { width: 40px; align-self: stretch; display: grid; place-items: center; border-right: 1px solid var(--rule); font-weight: 900; font-size: 11px; }
+.ch .no span { background: var(--ink); color: var(--bg); padding: 2px 5px; }
+.ch .ttl { font-weight: 800; font-size: 14px; white-space: nowrap; }
+.ch .sub { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; font-size: 13px; }
+.ch .time { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); }
+[data-np].running .no span { background: var(--hl); color: #fff; animation: blink 1.2s steps(2) infinite; }
+[data-np].failed .no span { background: var(--warn); }
+@keyframes blink { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { [data-np].running .no span { animation: none; } }
+.ch .btn { padding: 4px 10px; font-size: 12px; }
+/* progress: white step blocks + a hairline under the header */
+.ptxt { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 38%; }
+.blocks { display: none; gap: 3px; } .blocks.on { display: flex; }
+.blocks .cell { width: 18px; height: 12px; border: 1px solid var(--ink); background: linear-gradient(90deg, var(--ink) calc(var(--f) * 100%), transparent 0); }
+.blocks .cell.cur { animation: blink 1.2s steps(2) infinite; }
+.pct { font-weight: 900; font-size: 15px; min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+.eta { font: 700 12px "Arial Narrow", "Helvetica Neue", Arial, sans-serif; font-stretch: condensed; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.hair { height: 0; background: linear-gradient(90deg, var(--ink) calc(var(--p) * 1%), var(--dim) 0); }
+.hair.on { height: 3px; border-bottom: 1px solid var(--rule); }
+.hair.indet { background: repeating-linear-gradient(90deg, var(--ink) 0 24px, var(--bg) 24px 48px); background-size: 48px 100%; animation: march 1s linear infinite; }
+@keyframes march { to { background-position: 48px 0; } }
+@media (prefers-reduced-motion: reduce) { .blocks .cell.cur, .hair.indet { animation: none; } }
+
+/* building blocks */
+main { padding: 0 0 60px; }
+.view { display: none; } .view.on { display: block; }
+.sect { padding: 18px 12px 0; }
+h2.big { font-size: 28px; font-weight: 800; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+h2.big::after { content: "›"; font-weight: 400; }
+h2.big.plain::after { content: ""; }
+.lede { color: var(--ink); font-size: 14px; margin: 0 0 16px; max-width: 720px; }
+.btn { border: 1px solid var(--ink); background: var(--bg); padding: 9px 16px; font-weight: 800; font-size: 14px; }
+.btn:hover:not(:disabled) { background: var(--ink); color: var(--bg); }
+.btn.primary { background: var(--ink); color: var(--bg); }
+.btn.primary:hover:not(:disabled) { background: var(--hl); border-color: var(--hl); color: #fff; }
+.btn.small { padding: 4px 10px; font-size: 12px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+
+/* the workflow strip */
+.flow { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin-top: 0; }
+.flow a { display: flex; flex-direction: column; gap: 4px; padding: 14px 12px 16px; text-decoration: none; border-right: 1px solid var(--rule); min-height: 132px; position: relative; }
+.flow a:last-child { border-right: 0; }
+.flow a:hover { background: #111; }
+.flow .n { font: 900 46px/1 "Arial Narrow", Arial, sans-serif; font-stretch: condensed; }
+.flow b { font-size: 20px; font-weight: 800; }
+.flow .s { color: var(--muted); font-size: 12.5px; }
+.flow .c { margin-top: auto; font-weight: 700; font-size: 13px; }
+.flow a.is-todo .c { color: var(--hl); }
+.flow a.is-next { background: var(--ink); color: var(--bg); }
+.flow a.is-next .s { color: #555; }
+.flow a.is-next::before { content: "NEXT"; position: absolute; top: 12px; right: 12px; background: var(--hl); color: #fff; font: 800 11px/1 "Arial Narrow", Arial, sans-serif; padding: 4px 6px; }
+
+/* collection cards, like show cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; padding: 6px 12px 0; }
+.col-card { border: 1px solid #6a6a6a; display: flex; flex-direction: column; cursor: pointer; padding-bottom: 12px; }
+.col-card:hover { border-color: var(--ink); }
+.col-art { aspect-ratio: 16/10; position: relative; filter: grayscale(.25) contrast(1.1); }
+.col-play { position: absolute; left: 10px; bottom: 10px; width: 48px; height: 40px; border: 0; background: var(--ink); color: var(--bg); font-size: 18px; }
+.col-play:hover:not(:disabled) { background: var(--hl); color: #fff; }
+.col-meta { display: flex; justify-content: space-between; padding: 10px 12px 0; font-size: 11.5px; text-transform: uppercase; }
+.col-title { font-size: 21px; font-weight: 800; margin: 6px 12px 2px; line-height: 1.05; word-break: break-word; }
+.col-sub { color: var(--muted); font-size: 13px; padding: 0 12px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 12px 0; margin-top: auto; }
+.tag { border: 1px solid #8a8a8a; padding: 5px 8px; font-size: 11.5px; font-weight: 700; }
+
+/* detail */
+.col-hero { display: grid; grid-template-columns: minmax(0, 420px) 1fr; gap: 24px; padding: 18px 12px 0; align-items: start; }
+.col-art.big { aspect-ratio: 1; }
+.eyebrow { font-size: 12px; font-weight: 700; color: var(--muted); }
+.col-hero h2 { font-size: clamp(34px, 6vw, 72px); line-height: .95; margin: 6px 0 16px; font-weight: 900; word-break: break-word; }
+.spec { display: grid; grid-template-columns: 90px 1fr; border-top: 1px solid var(--dim); margin: 0; }
+.spec dt, .spec dd { margin: 0; padding: 8px 0; border-bottom: 1px solid var(--dim); }
+.spec dt { text-transform: uppercase; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.path { word-break: break-all; font-size: 12.5px; }
+h3.sec { font-size: 18px; font-weight: 800; margin: 26px 12px 8px; }
+.links { list-style: none; margin: 0 12px; padding: 0; } .links li { padding: 6px 0; border-bottom: 1px solid var(--dim); }
+
+/* tables */
+table.list { width: calc(100% - 24px); margin: 0 12px; border-collapse: collapse; }
+.list th { text-align: left; font-size: 12px; font-weight: 700; color: var(--muted); padding: 8px 8px 8px 0; border-bottom: 1px solid var(--rule); }
+.list td { padding: 10px 8px 10px 0; border-bottom: 1px solid var(--dim); vertical-align: middle; }
+.list .r { text-align: right; font-variant-numeric: tabular-nums; }
+.list a { text-decoration: none; font-weight: 700; } .list a:hover { text-decoration: underline; }
+.meter-cell { width: 40%; }
+.meter { height: 6px; background: var(--dim); } .meter i { display: block; height: 100%; background: var(--ink); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); margin: 0 12px; }
+.tile { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 14px; display: flex; flex-direction: column; }
+.tile b { font: 900 40px/1 "Arial Narrow", Arial, sans-serif; font-stretch: condensed; }
+.tile span { color: var(--muted); font-size: 12px; text-transform: uppercase; margin-top: 4px; }
+.how { margin: 18px 12px 0; padding: 0; list-style: none; counter-reset: s; max-width: 720px; }
+.how li { counter-increment: s; display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--dim); }
+.how li::before { content: counter(s); font: 900 18px/1.2 "Arial Narrow", Arial, sans-serif; min-width: 22px; }
+
+/* add */
+.form { display: grid; gap: 10px; max-width: 760px; padding: 0 12px; }
+textarea, input[type=text] { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--ink); padding: 12px; font: 14px/1.5 ui-monospace, Menlo, monospace; border-radius: 0; }
+textarea { min-height: 140px; resize: vertical; }
+textarea:focus, input:focus { outline: none; box-shadow: 0 0 0 1px var(--ink); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; } .row > input { flex: 1; min-width: 160px; }
+#addPreview { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+#addPreview li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--dim); }
+#addPreview span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } #addPreview em { color: var(--muted); font-style: normal; white-space: nowrap; }
+label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+pre#logOut { margin: 0 12px; border: 1px solid var(--rule); padding: 12px; min-height: 50vh; max-height: 70vh; overflow: auto; font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; color: #ddd; }
+.empty { padding: 20px 12px; color: var(--muted); }
+#toast { position: fixed; left: 12px; bottom: 12px; background: var(--ink); color: var(--bg); padding: 10px 14px; font-weight: 700; z-index: 20; }
+
+@media (max-width: 820px) {
+  .flow { grid-template-columns: 1fr 1fr; } .flow a { border-bottom: 1px solid var(--rule); }
+  .col-hero { grid-template-columns: 1fr; }
+  .right .hide-s { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <a class="logo" href="#" data-go="home" aria-label="mixarchive home"><span>MX</span></a>
+    <nav aria-label="Workflow">
+      <a href="#" data-go="home">Collections</a>
+      <a href="#" data-go="add" data-step="add"><sup>1</sup>Add</a>
+      <a href="#" data-go="update" data-step="update"><sup>2</sup>Update</a>
+      <a href="#" data-go="sync" data-step="sync"><sup>3</sup>Sync</a>
+      <a href="#" data-go="analyze" data-step="analyze"><sup>4</sup>Analyze</a>
+      <a href="#" data-go="usb" data-step="usb"><sup>5</sup>USB</a>
+      <a href="#" data-go="output">Output</a>
+    </nav>
+    <div class="right"><span data-rb></span><select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option><option value="/">classic</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></div>
+  </div>
+  <div class="ch" data-np>
+    <div class="no"><span>NOW</span></div>
+    <span class="ttl cond" data-np-title>Nothing running</span>
+    <span class="ptxt cond" data-prog-text></span>
+    <span class="sub" data-np-sub></span>
+    <span class="blocks" data-prog data-prog-cells="steps" title="Steps for this collection"></span>
+    <span class="pct cond" data-prog-pct></span>
+    <span class="eta" data-prog-eta></span>
+    <span class="time" data-np-time>0:00</span>
+    <button class="btn small" data-go="output">Output</button>
+    <button class="btn small" data-np-stop disabled>Stop</button>
+  </div>
+  <div class="hair" data-prog></div>
+  <div class="ch">
+    <div class="no"><span data-next-n>1</span></div>
+    <span class="ttl cond" data-next-title>Next</span>
+    <span class="sub" data-next-sub></span>
+    <button class="btn small" data-next-go data-go="home">Go →</button>
+  </div>
+</header>
+
+<main>
+  <section class="view" id="v-home">
+    <div class="flow" aria-label="Workflow steps">
+      <a href="#" data-go="add" data-step="add"><span class="n">1</span><b>Add</b><span class="s">Paste YouTube channels, playlists or videos</span><span class="c" data-count="add"></span></a>
+      <a href="#" data-go="update" data-step="update"><span class="n">2</span><b>Update</b><span class="s">Download, split into tracks, tag, level</span><span class="c" data-count="update"></span></a>
+      <a href="#" data-go="sync" data-step="sync"><span class="n">3</span><b>Sync</b><span class="s">New tracks + playlists into rekordbox</span><span class="c" data-count="sync"></span></a>
+      <a href="#" data-go="analyze" data-step="analyze"><span class="n">4</span><b>Analyze</b><span class="s">Beatgrids and keys, in rekordbox</span><span class="c" data-count="analyze"></span></a>
+      <a href="#" data-go="usb" data-step="usb"><span class="n">5</span><b>USB</b><span class="s">Export playlists to the stick</span><span class="c" data-count="usb"></span></a>
+    </div>
+    <div class="sect"><h2 class="big">Collections</h2><p class="lede muted" data-lib-size></p></div>
+    <div class="grid" id="colGrid"></div>
+  </section>
+
+  <section class="view" id="v-col">
+    <div class="sect"><a href="#" data-go="home" class="cond small">‹ All collections</a></div>
+    <div id="colDetail"></div>
+  </section>
+
+  <section class="view" id="v-add">
+    <div class="sect"><h2 class="big plain">1 · Add sources</h2>
+      <p class="lede">A channel or playlist becomes its own collection. Single videos go into YouTube picks.</p></div>
+    <div class="form">
+      <textarea id="urls" placeholder="https://www.youtube.com/@somelabel&#10;https://youtu.be/VIDEOID" aria-label="YouTube links, one per line"></textarea>
+      <ul id="addPreview" aria-live="polite"></ul>
+      <div class="row"><input type="text" id="addLabel" placeholder="Label (optional)" aria-label="Label"><input type="text" id="addGenre" placeholder="Genre (optional)" aria-label="Genre"></div>
+      <div class="row"><label class="chk"><input type="checkbox" id="addRun"> Download and split straight away</label><span style="flex:1"></span><button class="btn primary" id="addBtn">Add</button></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-update">
+    <div class="sect"><h2 class="big plain">2 · Update</h2>
+      <p class="lede">Checks each collection for new uploads, downloads them, splits mixes into tracks, tags and levels them. Safe to run any time: finished work is skipped.</p>
+      <div class="actions"><button class="btn primary" data-update-all>Update all</button></div></div>
+    <table class="list"><thead><tr><th>Collection</th><th>Downloaded</th><th class="r">Tracks</th><th></th></tr></thead><tbody id="updList"></tbody></table>
+  </section>
+
+  <section class="view" id="v-sync">
+    <div class="sect"><h2 class="big plain">3 · Sync to rekordbox</h2>
+      <p class="lede" data-sync-note></p>
+      <div class="actions"><button class="btn primary" data-sync-btn>Sync now</button><button class="btn" data-open="rekordbox">Open rekordbox</button><button class="btn" data-rb-refresh>Recheck</button><span class="muted small" data-rb-at style="align-self:center"></span></div></div>
+    <table class="list"><thead><tr><th>Playlist</th><th class="r">On disk</th><th class="r">In rekordbox</th><th class="r">To add</th></tr></thead><tbody id="syncList"></tbody></table>
+  </section>
+
+  <section class="view" id="v-analyze">
+    <div class="sect"><h2 class="big plain">4 · Analyze</h2>
+      <p class="lede">This step happens in rekordbox. mixarchive keeps a playlist of everything it added that hasn't been analyzed.</p>
+      <div class="actions"><button class="btn primary" data-open="rekordbox">Open rekordbox</button><button class="btn" data-rb-refresh>Recheck</button><span class="muted small" data-rb-at style="align-self:center"></span></div></div>
+    <div class="tiles" id="rbTiles"></div>
+    <ol class="how"><li>In rekordbox, open the playlist folder mixarchive › Not analyzed yet.</li><li>Select all tracks (⌘A).</li><li>Right-click › Analyze Track. When it's done, press Recheck here.</li></ol>
+  </section>
+
+  <section class="view" id="v-usb">
+    <div class="sect"><h2 class="big plain">5 · USB stick</h2>
+      <p class="lede">Also in rekordbox: drag or sync the mixarchive playlists you want onto the stick. Analyze first so the players get beatgrids.</p>
+      <div class="actions"><button class="btn primary" data-open="rekordbox">Open rekordbox</button></div></div>
+    <table class="list"><thead><tr><th>Playlist</th><th class="r">Tracks</th><th class="r">Not analyzed</th><th class="r">Size</th></tr></thead><tbody id="usbList"></tbody></table>
+  </section>
+
+  <section class="view" id="v-output">
+    <div class="sect"><h2 class="big plain">Output</h2><p class="lede muted">Everything the current or last command printed.</p></div>
+    <pre id="logOut" aria-live="off"></pre>
+  </section>
+</main>
+<div id="toast" hidden role="status"></div>
+<script>for (const f of ["/progress.js", "/skin.js"]) { const s = document.createElement("script"); s.src = f + location.search; s.async = false; document.body.append(s); }</script>
+</body>
+</html>

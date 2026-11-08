@@ -9,6 +9,7 @@ import glob
 import json
 import os
 import secrets
+import signal
 import subprocess
 import sys
 import threading
@@ -23,9 +24,15 @@ from .collection import Collection, library, library_root
 from .util import APP_DIR, rekordbox_running
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
+# the classic page plus test UIs; they share the /api endpoints (and /skin.js for the workflow ones)
+PAGES = {"/": ("gui.html", "text/html"), "/music": ("gui_music.html", "text/html"),
+         "/radio": ("gui_radio.html", "text/html"), "/panel": ("gui_panel.html", "text/html"),
+         "/hybrid": ("gui_hybrid.html", "text/html"), "/skin.js": ("gui_skin.js", "text/javascript"),
+         "/progress.js": ("gui_progress.js", "text/javascript")}
 COMMANDS = {"add", "update", "run", "resolve", "tracklists", "fetch", "art", "split", "status",
             "verify", "rbsync", "files", "merge", "list"}
-REKORDBOX_EXE = r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe"
+REKORDBOX_EXE = (r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe" if os.name == "nt"
+                 else "/Applications/rekordbox */rekordbox.app")
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
@@ -48,10 +55,11 @@ class Job:
             self.args, self.lines, self.code = args, [], None
             self.started, self.ended = time.time(), None
             self.proc = subprocess.Popen(
-                [sys.executable, "-I", "-m", "mixarchive", *args], cwd=APP_DIR,
+                # -u: -I ignores PYTHONUNBUFFERED, and without it output arrives in 8 KB chunks
+                [sys.executable, "-I", "-u", "-m", "mixarchive", *args], cwd=APP_DIR,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW,
-                env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1"))
+                start_new_session=os.name != "nt", env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1"))
             threading.Thread(target=self._pump, daemon=True).start()
             return True
 
@@ -64,6 +72,9 @@ class Job:
 
     def stop(self):
         if self.running:      # the whole tree: yt-dlp / ffmpeg / rbvenv children too
+            if os.name != "nt":   # the child leads its own process group (start_new_session)
+                os.killpg(self.proc.pid, signal.SIGKILL)
+                return
             subprocess.run(["taskkill", "/T", "/F", "/PID", str(self.proc.pid)],
                            capture_output=True, creationflags=NO_WINDOW)
 
@@ -150,8 +161,8 @@ def journals():
 def open_rekordbox():
     exes = sorted(glob.glob(REKORDBOX_EXE))
     if not exes:
-        raise RuntimeError("rekordbox.exe not found under C:\\Program Files\\Pioneer")
-    subprocess.Popen([exes[-1]], close_fds=True)
+        raise RuntimeError(f"rekordbox not found at {REKORDBOX_EXE}")
+    subprocess.Popen(([] if os.name == "nt" else ["open"]) + [exes[-1]], close_fds=True)
 
 
 def make_server(port=8765):
@@ -178,7 +189,7 @@ def make_server(port=8765):
             # DNS rebinding: only our own host names; CSRF: only requests with the token
             if self.headers.get("Host") not in (f"127.0.0.1:{port}", f"localhost:{port}"):
                 return False
-            given = (parse_qs(url.query).get("t") or [""])[0] if url.path == "/" else self.headers.get("X-Token", "")
+            given = (parse_qs(url.query).get("t") or [""])[0] if url.path in PAGES else self.headers.get("X-Token", "")
             return secrets.compare_digest(given, token)
 
         def do_GET(self):
@@ -186,9 +197,10 @@ def make_server(port=8765):
             if not self._allowed(url):
                 return self._send(403, {"error": "forbidden"})
             q = parse_qs(url.query)
-            if url.path == "/":
-                with open(PAGE, "rb") as fh:
-                    return self._send(200, fh.read(), "text/html")
+            if url.path in PAGES:
+                name, ctype = PAGES[url.path]
+                with open(os.path.join(os.path.dirname(PAGE), name), "rb") as fh:
+                    return self._send(200, fh.read(), ctype)
             if url.path == "/api/overview":
                 return self._send(200, {**overview(), "job": job.state(len(job.lines))})
             if url.path == "/api/rekordbox":
@@ -225,7 +237,11 @@ def make_server(port=8765):
                     if body.get("what") == "rekordbox":
                         open_rekordbox()
                     elif body.get("what") == "folder" and body.get("name") in library():
-                        os.startfile(library()[body["name"]])
+                        folder = library()[body["name"]]
+                        if os.name == "nt":
+                            os.startfile(folder)
+                        else:
+                            subprocess.Popen(["open", folder])
                     else:
                         return self._send(400, {"error": "can't open that"})
                 except Exception as e:
@@ -264,10 +280,13 @@ def serve(port=8765, open_browser=True):
         job.stop()
 
 
-def window(port=8765):
+def window(port=8765, page="/"):
     """`mixarchive app`: the same GUI in a window of its own (pywebview: WebView2 on Windows,
     WebKit on macOS). Closing the window stops the server; while a command runs it stays open
-    and the page says why (Stop first), so a long fetch doesn't die from a stray click."""
+    and the page says why (Stop first), so a long fetch doesn't die from a stray click.
+    page: which design to open on (a key of PAGES, e.g. "/hybrid")."""
+    if page not in PAGES or page.endswith(".js"):
+        raise SystemExit(f"no such page: {page} (one of {', '.join(p for p in PAGES if not p.endswith('.js'))})")
     try:
         import webview
     except ImportError:
@@ -275,6 +294,7 @@ def window(port=8765):
                          "(or use `mixarchive gui` for the browser)")
 
     server, address, job = make_server(port)
+    address = address.replace("/?t=", f"{page}?t=", 1)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     print(f"mixarchive app: {address}", flush=True)
     win = webview.create_window("mixarchive", address, width=1280, height=880, min_size=(860, 600))
