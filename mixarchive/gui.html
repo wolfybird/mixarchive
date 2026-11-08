@@ -101,6 +101,7 @@ kbd { font: 12px ui-monospace, Consolas, monospace; background: var(--chip); pad
   <span class="pill" id="jobPill"><span class="dot"></span><span>idle</span></span>
   <span class="spacer"></span>
   <span class="muted small" id="libRoot"></span>
+  <select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option><option value="/">classic</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script>
 </header>
 
 <main>

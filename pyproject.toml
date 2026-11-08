@@ -18,4 +18,4 @@ build-backend = "setuptools.build_meta"
 packages = ["mixarchive"]
 
 [tool.setuptools.package-data]
-mixarchive = ["gui.html", "gui_music.html"]
+mixarchive = ["gui*.html", "gui_skin.js"]

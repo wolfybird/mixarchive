@@ -193,7 +193,7 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     <h1 id="topTitle"></h1>
     <span class="spacer"></span>
     <span class="chip" id="rbChip"><span class="dot"></span><span>rekordbox …</span></span>
-    <a class="chip" id="classic" style="color:inherit;text-decoration:none">Classic view</a>
+    <select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option><option value="/">classic</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script>
   </div>
 
   <section class="view on" id="v-home"><div class="pad">
@@ -308,7 +308,6 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     if (o) api("/api/open", o.dataset.open === "rekordbox" ? { what: "rekordbox" } : { what: "folder", name: o.dataset.open }).catch(err => say(err.message));
   });
   $("#main").addEventListener("scroll", () => $("#top").classList.toggle("stuck", $("#main").scrollTop > 180));
-  $("#classic").href = "/?t=" + encodeURIComponent(token);
 
   // ---------------------------------------------------------------- data
   async function loadOverview() {

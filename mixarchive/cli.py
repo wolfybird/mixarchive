@@ -981,7 +981,7 @@ def cmd_update(a):
 
 def cmd_gui(a):
     from . import gui
-    gui.serve(a.port, open_browser=not a.no_browser)
+    gui.serve(a.port, open_browser=not a.no_browser, window=a.window)
 
 
 def cmd_move(a):
@@ -1144,6 +1144,9 @@ def main(argv=None):
     p = sub.add_parser("gui", help="open the GUI in the browser (local only)")
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--no-browser", action="store_true", help="just print its address")
+    p.add_argument("--window", nargs="?", const="/hybrid", metavar="PAGE",
+                   help="open in its own window instead of the browser (needs pywebview); "
+                        "PAGE is /, /hybrid (default), /radio, /panel or /music")
     p.set_defaults(fn=cmd_gui)
 
     for stream in (sys.stdout, sys.stderr):     # titles with emoji / math letters on cp1252

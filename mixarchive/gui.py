@@ -24,7 +24,10 @@ from .collection import Collection, library, library_root
 from .util import APP_DIR, rekordbox_running
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
-MUSIC_PAGE = os.path.join(os.path.dirname(PAGE), "gui_music.html")   # test UI, music-app style
+# the classic page plus test UIs; they share the /api endpoints (and /skin.js for the workflow ones)
+PAGES = {"/": ("gui.html", "text/html"), "/music": ("gui_music.html", "text/html"),
+         "/radio": ("gui_radio.html", "text/html"), "/panel": ("gui_panel.html", "text/html"),
+         "/hybrid": ("gui_hybrid.html", "text/html"), "/skin.js": ("gui_skin.js", "text/javascript")}
 COMMANDS = {"add", "update", "run", "resolve", "tracklists", "fetch", "art", "split", "status",
             "verify", "rbsync", "files", "merge", "list"}
 REKORDBOX_EXE = (r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe" if os.name == "nt"
@@ -160,7 +163,8 @@ def open_rekordbox():
     subprocess.Popen(([] if os.name == "nt" else ["open"]) + [exes[-1]], close_fds=True)
 
 
-def serve(port=8765, open_browser=True):
+def serve(port=8765, open_browser=True, window=None):
+    """window: a page path (e.g. "/hybrid") to show in a native window instead of the browser."""
     token = secrets.token_urlsafe(18)
     rb = RekordboxStatus()
     job = Job(on_done=lambda args: rb.refresh() if args and args[0] in ("rbsync", "files", "update", "merge") else None)
@@ -183,7 +187,7 @@ def serve(port=8765, open_browser=True):
             # DNS rebinding: only our own host names; CSRF: only requests with the token
             if self.headers.get("Host") not in (f"127.0.0.1:{port}", f"localhost:{port}"):
                 return False
-            given = (parse_qs(url.query).get("t") or [""])[0] if url.path in ("/", "/music") else self.headers.get("X-Token", "")
+            given = (parse_qs(url.query).get("t") or [""])[0] if url.path in PAGES else self.headers.get("X-Token", "")
             return secrets.compare_digest(given, token)
 
         def do_GET(self):
@@ -191,9 +195,10 @@ def serve(port=8765, open_browser=True):
             if not self._allowed(url):
                 return self._send(403, {"error": "forbidden"})
             q = parse_qs(url.query)
-            if url.path in ("/", "/music"):
-                with open(PAGE if url.path == "/" else MUSIC_PAGE, "rb") as fh:
-                    return self._send(200, fh.read(), "text/html")
+            if url.path in PAGES:
+                name, ctype = PAGES[url.path]
+                with open(os.path.join(os.path.dirname(PAGE), name), "rb") as fh:
+                    return self._send(200, fh.read(), ctype)
             if url.path == "/api/overview":
                 return self._send(200, {**overview(), "job": job.state(len(job.lines))})
             if url.path == "/api/rekordbox":
@@ -258,6 +263,16 @@ def serve(port=8765, open_browser=True):
         raise SystemExit(f"no free port between {port} and {port + 19}")
     address = f"http://127.0.0.1:{port}/?t={token}"
     print(f"mixarchive GUI: {address}\n(keep this window open while you use it; Ctrl+C stops it)", flush=True)
+    if window:
+        import webview     # pywebview: a WebKit window on macOS
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        webview.create_window("mixarchive", f"http://127.0.0.1:{port}{window}?t={token}", width=1280, height=860, min_size=(720, 520))
+        try:
+            webview.start()         # returns when the window is closed
+        finally:
+            job.stop()
+            server.shutdown()
+        return
     if open_browser:
         webbrowser.open(address)
     try:
