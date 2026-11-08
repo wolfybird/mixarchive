@@ -88,6 +88,16 @@ def runnable(path):
 
 
 @functools.lru_cache(maxsize=None)
+def _resolved(name, configured):
+    """ffmpeg / ffprobe as configured if that runs, else what find_tool finds; worked out once
+    per process (settings() is called per track while splitting)."""
+    if runnable(configured):
+        return configured
+    found = find_tool(name)
+    return found if runnable(found) else configured
+
+
+@functools.lru_cache(maxsize=None)
 def _rbpython():
     """The Python that runs rbdb / rbfiles / rbmerge (pyrekordbox): an rbvenv beside the data
     (the older two-environment setup), else this one (`pip install "mixarchive[rekordbox]"`)."""
@@ -114,10 +124,8 @@ def settings():
     p = os.path.join(APP_DIR, "settings.json")
     if os.path.exists(p):
         s.update(load_json(p))
-    for k in ("ffmpeg", "ffprobe"):
-        if not runnable(s[k]):     # the default name, or a path that isn't there (any more)
-            found = find_tool(k)
-            s[k] = found if runnable(found) else s[k]
+    for k in ("ffmpeg", "ffprobe"):     # the default name, or a path that isn't there (any more)
+        s[k] = _resolved(k, s[k])
     s["ytdlp"] = s["ytdlp"] or _scripts_tool("yt-dlp") or "yt-dlp"
     s["rbpython"] = s["rbpython"] or _rbpython()
     if s["library_root"]:          # "~/Music/DJ", or relative to mixarchive's own folder
@@ -211,8 +219,12 @@ def slug(s):
 
 def rekordbox_running():
     import subprocess
-    if os.name != "nt":
-        return subprocess.run(["pgrep", "-xq", "rekordbox"]).returncode == 0
+    if os.name != "nt":           # -x only: -q is BSD's, and Linux may not have pgrep at all
+        try:
+            return subprocess.run(["pgrep", "-x", "rekordbox"], stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.DEVNULL).returncode == 0
+        except FileNotFoundError:
+            return False
     r = subprocess.run(["tasklist", "/FI", "IMAGENAME eq rekordbox.exe", "/NH"],   # no console flash
                        capture_output=True, text=True, errors="replace", creationflags=NO_WINDOW)
     return "rekordbox.exe" in r.stdout.lower()

@@ -107,8 +107,9 @@ def library():
 
 
 def _inside(path, folder):
-    return os.path.normcase(os.path.abspath(path)).startswith(
-        os.path.normcase(os.path.join(os.path.abspath(folder), "")))
+    """path is folder, or somewhere under it."""
+    p, f = (os.path.normcase(os.path.abspath(x)) for x in (path, folder))
+    return p == f or p.startswith(os.path.join(f, ""))
 
 
 def library_root():

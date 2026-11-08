@@ -143,7 +143,7 @@
       ${syncRows().filter(r => r.col === c.name).map(r => `<tr><td>${esc(r.name)}</td><td class="r">${num(r.disk)}</td><td class="r">${num(r.rb)}</td><td class="r">${size(r.bytes)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">none yet</td></tr>`}
       </tbody></table>
       <h3 class="sec">Sources</h3>
-      <ul class="links">${c.links.map(u => `<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</a></li>`).join("")}</ul>`);
+      <ul class="links">${(c.links || []).map(u => `<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</a></li>`).join("")}</ul>`);
   }
   function renderUpdate() {
     set("#updList", S.cols.map(c => {
@@ -171,7 +171,14 @@
 
   // ------------------------------------------------------------------ data
   async function loadOverview() {
-    try { const o = await api("/api/overview"); S.cols = o.collections; S.rbOpen = o.rekordbox_running; S.root = o.library_root; renderJob(o.job); render(); firstRun(); }
+    try {
+      const o = await api("/api/overview");
+      const fresh = o.job && o.job.running && !(S.job && S.job.running);   // started in another window
+      S.cols = o.collections; S.rbOpen = o.rekordbox_running; S.root = o.library_root;
+      if (fresh) { set("#logOut", ""); from = 0; S.last = ""; }
+      renderJob(o.job); render(); firstRun();
+      if (fresh) poll();
+    }
     catch (e) { say(e.message); }
   }
   // a new library: show where the music will go, and let it change before the first add
@@ -199,7 +206,7 @@
   // ------------------------------------------------------------------ commands
   let from = 0, polling = null, tick = null;
   async function run(args) {
-    try { const s = await api("/api/run", { args }); set("#logOut", ""); from = 0; renderJob(s); poll(); say("Started: mixarchive " + args.join(" ")); }
+    try { const s = await api("/api/run", { args }); set("#logOut", ""); from = 0; S.last = ""; renderJob(s); poll(); say("Started: mixarchive " + args.join(" ")); }
     catch (e) { say(e.message); }
   }
   function poll() {
@@ -220,10 +227,11 @@
     if (pre && s.lines && s.lines.length) {
       const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
       pre.textContent += s.lines.join("\n") + "\n"; from = s.total;
+      S.last = s.lines[s.lines.length - 1];
       if (atEnd) pre.scrollTop = pre.scrollHeight;
     }
     const args = s.args || [], name = args.filter(a => !a.startsWith("-")).slice(1).join(", ");
-    const last = pre ? (pre.textContent.trim().split("\n").pop() || "") : "";
+    const last = (S.last || "").trim();
     set("[data-np-title]", esc(args.length ? `${args[0]} · ${name || "all collections"}` : "Nothing running"));
     set("[data-np-sub]", esc(s.running ? (last || "starting…") : args.length ? (s.code === 0 ? "finished" : `stopped (exit ${s.code})`) : "idle"));
     $$("[data-np]").forEach(e => { e.classList.toggle("running", !!s.running); e.classList.toggle("failed", !s.running && s.code != null && s.code !== 0); });
@@ -244,7 +252,7 @@
   //   [data-prog-cells=N]      N .cell LEDs lit up to the overall percentage
   //   [data-prog-text], [data-prog-pct], [data-prog-step]
   function renderProgress(s, args, text) {
-    const p = s.running && window.mxProgress ? window.mxProgress(text, args, S.cols.length) : null;
+    const p = s.running && window.mxProgress ? window.mxProgress(text, args, S.cols.length, s.started) : null;
     const pct = p && p.frac != null ? Math.round(p.frac * 100) : null;
     $$("[data-prog]").forEach(e => {
       e.classList.toggle("on", !!p); e.classList.toggle("indet", !!p && pct == null);

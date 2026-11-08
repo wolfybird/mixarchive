@@ -506,7 +506,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     }
     $("#conStop").disabled = !s.running;
     // progress, read from the output by gui_progress.js
-    const p = s.running && window.mxProgress ? window.mxProgress($("#conOut").textContent, s.args, (state.collections || []).length) : null;
+    const p = s.running && window.mxProgress ? window.mxProgress($("#conOut").textContent, s.args, (state.collections || []).length, s.started) : null;
     const pct = p && p.frac != null ? Math.round(p.frac * 100) : null;
     $("#conProg").hidden = !p;
     $("#conProg").classList.toggle("indet", pct == null);
@@ -555,7 +555,10 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
       state.overview = o; state.rbOpen = o.rekordbox_running; state.collections = o.collections;
       $("#libRoot").textContent = o.library_root;
       renderRbPill(); renderCollections(); fillCollectionSelect();
-      if (!state.job) renderJob(o.job);
+      const fresh = o.job && o.job.running && !(state.job && state.job.running);   // started in another window
+      if (fresh) { $("#conOut").textContent = ""; logFrom = 0; }
+      if (!state.job || fresh) renderJob(o.job);
+      if (fresh) poll();
       gate();
     } catch (e) { $("#collections").innerHTML = `<tr><td colspan="7">${esc(e.message)}</td></tr>`; }
   }

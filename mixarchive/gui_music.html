@@ -319,8 +319,11 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
   async function loadOverview() {
     try {
       const o = await api("/api/overview");
+      const fresh = o.job && o.job.running && !(S.job && S.job.running);   // started in another window
       S.cols = o.collections; S.rbOpen = o.rekordbox_running;
+      if (fresh) { $("#logOut").textContent = ""; from = 0; S.last = ""; }
       renderLib(); renderJob(o.job);
+      if (fresh) poll();
       if (S.current.startsWith("col:")) renderCol(S.current.slice(4));
     } catch (e) { say(e.message); }
   }
@@ -343,7 +346,7 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     const s = c.singles || {}, h = hue(c.name);
     const rows = [
       ...(c.playlists || []).map(p => ({ t: p.name, s: "rekordbox playlist", a: `${num(p.tracks)} tracks`, b: size(p.bytes) })),
-      ...c.links.map(u => ({ t: `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</a>`, s: "Source", a: "", b: "", raw: true })),
+      ...(c.links || []).map(u => ({ t: `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</a>`, s: "Source", a: "", b: "", raw: true })),
     ];
     $("#v-col").innerHTML = `
       <div style="background:linear-gradient(180deg,hsl(${h} 55% 34%) 0%,hsl(${h} 40% 16%) 70%,var(--panel) 100%)">
@@ -382,7 +385,7 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
   // ---------------------------------------------------------------- commands = "now playing"
   let from = 0, polling = null;
   async function run(args) {
-    try { const s = await api("/api/run", { args }); $("#logOut").textContent = ""; from = 0; renderJob(s); poll(); }
+    try { const s = await api("/api/run", { args }); $("#logOut").textContent = ""; from = 0; S.last = ""; renderJob(s); poll(); }
     catch (e) { say(e.message); }
   }
   function poll() {
@@ -401,15 +404,16 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     if (s.lines && s.lines.length) {
       const pre = $("#logOut"), atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
       pre.textContent += s.lines.join("\n") + "\n"; from = s.total;
+      S.last = s.lines[s.lines.length - 1];
       if (atEnd) pre.scrollTop = pre.scrollHeight;
     }
     const args = s.args || [], name = args.filter(a => !a.startsWith("-")).slice(1).join(", ");
-    const last = ($("#logOut").textContent.trim().split("\n").pop() || "");
+    const last = (S.last || "").trim();
     $("#npCover").setAttribute("style", "width:56px;" + coverCss(name || args[0] || "mixarchive"));
     $("#npCover").textContent = args[0] ? (name || "all").slice(0, 8) : "";
     $("#npTitle").textContent = args.length ? `${args[0]} · ${name || "all collections"}` : "Nothing running";
     // progress from the output (gui_progress.js): a real fill when there's a count, the sliding bar when not
-    const p = s.running && window.mxProgress ? window.mxProgress($("#logOut").textContent, args, S.cols.length) : null;
+    const p = s.running && window.mxProgress ? window.mxProgress($("#logOut").textContent, args, S.cols.length, s.started) : null;
     const pct = p && p.frac != null ? Math.round(p.frac * 100) : null;
     const where = p ? [p.collections > 1 ? `${p.collection} ${p.collectionNo} of ${p.collections}` : p.collection, p.step + (p.count ? " " + p.count : "")].filter(Boolean).join(" · ") : "";
     $("#npSub").textContent = s.running ? (where || last || "Starting…") : args.length ? (s.code === 0 ? "Finished" : `Stopped (exit ${s.code})`) : "Pick a collection and press play to update it";
