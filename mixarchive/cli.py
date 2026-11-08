@@ -991,7 +991,7 @@ def cmd_update(a):
     if a.no_rbsync:
         return
     if not has_pyrekordbox():
-        print('  rekordbox sync skipped: it needs pyrekordbox (pip install "mixarchive[rekordbox]")')
+        print("  rekordbox sync skipped: pyrekordbox isn't installed (reinstall mixarchive: pipx reinstall mixarchive)")
         return
     if rekordbox_running():
         print("  rekordbox is open: close it, then run `mixarchive rbsync` to add the new tracks")

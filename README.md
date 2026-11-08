@@ -31,19 +31,18 @@ python -m pipx ensurepath
 open a new terminal (so the commands are on PATH), and:
 
 ```
-pipx install "mixarchive[app,rekordbox]"
+pipx install mixarchive
 mixarchive-app
 ```
 
 `mixarchive-app` opens mixarchive in a window of its own (see [GUI](#gui)); `mixarchive`
-is the command line. pipx gives mixarchive an environment of its own; `pip install` into
-any virtual environment works too. The extras: `app` is the window (pywebview), and
-`rekordbox` is what writes to rekordbox's database: `rbsync`, `files` and `merge`
-(pyrekordbox). Without them you still get the command line and `mixarchive gui` in the
-browser.
+is the command line. pipx gives mixarchive an environment of its own; `pip install
+mixarchive` into any virtual environment works too. Either way it brings everything
+mixarchive uses: yt-dlp and deno for downloads, pyrekordbox for rekordbox's database,
+pywebview for the window, mutagen, Pillow and numpy. Only ffmpeg (above) is separate.
 
 The newest code that isn't released yet installs from GitHub:
-`pipx install "mixarchive[app,rekordbox] @ git+https://github.com/wolfybird/mixarchive"`.
+`pipx install "git+https://github.com/wolfybird/mixarchive"`.
 
 Your collections go in `Music\mixarchive` in your home folder unless you pick another
 **music folder** before adding the first one (on the Add screen, or `library_root` in
@@ -75,7 +74,7 @@ it's open (it says so) - close it and run `mixarchive rbsync`.
 `mixarchive gui` opens the workflow in the browser (served on 127.0.0.1 only; the address
 carries a random token, so other pages can't drive it - keep its window open while you use
 it). `mixarchive app` (or `mixarchive-app`) opens it in a window of its own instead
-(pywebview, from the `app` extra: Edge WebView2 on Windows, WebKit on macOS). The window
+(pywebview: Edge WebView2 on Windows, WebKit on macOS). The window
 won't close while a command is running - press Stop first.
 
 Both open on **hybrid**. The **Design** menu at the top switches between the designs, and
@@ -120,8 +119,8 @@ To start the window with a double-click:
 For working on mixarchive itself, or running it from a folder of its own:
 
 1. Python 3.11+:
-   `py -3 -m venv venv` then `venv\Scripts\python -m pip install -e ".[app,rekordbox]"`.
-   On macOS: `python3 -m venv venv` then `venv/bin/python -m pip install -e ".[app,rekordbox]"`;
+   `py -3 -m venv venv` then `venv\Scripts\python -m pip install -e .`.
+   On macOS: `python3 -m venv venv` then `venv/bin/python -m pip install -e .`;
    paths below that say `venv\Scripts\` are `venv/bin/` there.
 2. ffmpeg, as in [Install](#install).
 3. Run from a clone, mixarchive keeps its own files (`settings.json`, `library.json`,
@@ -301,7 +300,7 @@ to the HLS copy of AAC 128k (format 234: same audio as 140, 16 kHz low-pass).
 | `update [NAME...] [--no-rbsync]` | `run` for every collection (or those named), then `rbsync` if rekordbox is closed |
 | `files status \| audit \| verify \| relocate \| move \| flac \| undo \| flaccopy \| silence ...` | the files behind rekordbox's whole collection (below) |
 | `gui [--port N] [--page NAME]` | the browser GUI (design: hybrid, radio, panel, music or classic) |
-| `app [--port N] [--page NAME]` | the same GUI in a window of its own (needs the `app` extra: pywebview) |
+| `app [--port N] [--page NAME]` | the same GUI in a window of its own (pywebview) |
 | `list` | known collections |
 | `move NAME NEWROOT [--delete-old]` | relocate a collection (copy, check sizes, re-register) |
 | `rbsync [NAME...] [--dry-run]` | put tracks + playlists straight into rekordbox's database (rekordbox closed); default: all collections |
@@ -452,9 +451,10 @@ of exporting a same-named different song.
 ## Licence
 
 mixarchive's own code is under the MIT licence (see [LICENSE](LICENSE)). It installs and
-uses other projects under their own licences, notably yt-dlp (Unlicense), pyrekordbox (MIT),
-mutagen (GPL-2.0-or-later), Pillow (MIT-CMU), SQLAlchemy (MIT), sqlcipher3 (zlib) and, for
-`mixarchive app`, pywebview (BSD-3-Clause); none of them is bundled here. The GUI's fonts
+uses other projects under their own licences, notably yt-dlp (Unlicense), deno (MIT),
+bgutil-ytdlp-pot-provider (GPL-3.0), pyrekordbox (MIT), mutagen (GPL-2.0-or-later), Pillow
+(MIT-CMU), numpy (BSD-3-Clause), SQLAlchemy (MIT), sqlcipher3 (zlib) and pywebview
+(BSD-3-Clause); none of them is bundled here. The GUI's fonts
 (Inter, Inter Tight, JetBrains Mono, Space Mono, Fredoka, VT323; SIL Open Font Licence) load
 from Google Fonts, with system fonts as the fallback offline. Thanks to their authors, and to pyrekordbox in particular for making
 rekordbox's database reachable.

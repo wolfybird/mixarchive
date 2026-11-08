@@ -100,7 +100,7 @@ def _resolved(name, configured):
 @functools.lru_cache(maxsize=None)
 def _rbpython():
     """The Python that runs rbdb / rbfiles / rbmerge (pyrekordbox): an rbvenv beside the data
-    (the older two-environment setup), else this one (`pip install "mixarchive[rekordbox]"`)."""
+    (the older two-environment setup), else this one (pyrekordbox comes with mixarchive)."""
     old = os.path.join(APP_DIR, "rbvenv", BIN, "python" + EXE)
     return old if os.path.isfile(old) else console_python()
 
@@ -161,8 +161,8 @@ def has_pyrekordbox():
 
 def require_pyrekordbox():
     if not has_pyrekordbox():
-        raise SystemExit('this needs pyrekordbox: pip install "mixarchive[rekordbox]" '
-                         '(with pipx: pipx install --force "mixarchive[app,rekordbox]")')
+        raise SystemExit("this needs pyrekordbox, which comes with mixarchive: reinstall it "
+                         "(pipx reinstall mixarchive, or pip install --force-reinstall mixarchive)")
 
 
 def load_json(path, default=None):

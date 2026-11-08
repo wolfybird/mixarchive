@@ -28,14 +28,17 @@ jobs:
         run: |
           python -m pip install --upgrade build
           python -m build
-      - name: Install the wheel with every extra into a new environment
+      - name: Install the wheel into a new environment, no extras (all it needs comes with it)
         shell: bash
         run: |
           python -m venv "$RUNNER_TEMP/env"
           if [ "$RUNNER_OS" = Windows ]; then bin="$RUNNER_TEMP/env/Scripts"; else bin="$RUNNER_TEMP/env/bin"; fi
           echo "BIN=$bin" >> "$GITHUB_ENV"
           wheel=$(ls dist/*.whl)
-          "$bin/python" -m pip install "${wheel}[app,rekordbox]"
+          "$bin/python" -m pip install "$wheel"
+          # the old install line, with the (now empty) extras, still resolves without a warning
+          "$bin/python" -m pip install --dry-run "${wheel}[app,rekordbox]" > "$RUNNER_TEMP/extras.log" 2>&1
+          if grep -qi "does not provide the extra" "$RUNNER_TEMP/extras.log"; then cat "$RUNNER_TEMP/extras.log"; exit 1; fi
       - name: Run it from outside the checkout
         shell: bash
         working-directory: ${{ runner.temp }}
@@ -57,7 +60,10 @@ jobs:
           assert s["rbpython"] == sys.executable
           for f in ("gui.html", "gui_hybrid.html", "gui_skin.js", "gui_progress.js", "rbdb.py", "rbfiles.py", "rbmerge.py"):
               assert os.path.isfile(os.path.join(pkg, f)), f + " missing from the package"
-          import pyrekordbox, webview
+          import importlib.util
+          import mutagen, numpy, PIL, pyrekordbox, webview, yt_dlp      # every dependency, no extras
+          assert importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http"), "PO token plugin missing"
+          assert os.path.isfile(os.path.join(os.path.dirname(s["ytdlp"]), "deno" + (".exe" if os.name == "nt" else ""))), "deno missing"
           server, address, job = gui.make_server(8799)
           threading.Thread(target=server.serve_forever, daemon=True).start()
           for page in ("hybrid", "classic", "music"):

@@ -331,8 +331,9 @@ def window(port=8765, page=DEFAULT_PAGE):
     try:
         import webview
     except ImportError:
-        raise SystemExit('The window needs pywebview: pipx install --force "mixarchive[app,rekordbox]" '
-                         '(or pip install "mixarchive[app]"). `mixarchive gui` opens it in the browser.')
+        raise SystemExit("The window needs pywebview, which comes with mixarchive: reinstall it (pipx "
+                         "reinstall mixarchive, or pip install --force-reinstall mixarchive). "
+                         "`mixarchive gui` opens it in the browser meanwhile.")
 
     server, address, job = make_server(port)
     stop_job_on_signals(job)

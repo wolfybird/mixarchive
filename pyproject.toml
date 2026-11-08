@@ -15,11 +15,23 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Multimedia :: Sound/Audio",
 ]
-dependencies = ["yt-dlp[default]", "deno", "mutagen", "pillow"]
+# everything mixarchive uses comes with `pip install mixarchive` (ffmpeg, not a Python
+# package, is installed separately: README > Install)
+dependencies = [
+    "yt-dlp[default]",              # downloads (with yt-dlp-ejs for YouTube's JavaScript)
+    "deno",                         # the JavaScript runtime yt-dlp needs for YouTube
+    "bgutil-ytdlp-pot-provider",    # yt-dlp plugin: PO tokens for the 403 retry (README > Setup)
+    "mutagen",                      # tags
+    "pillow",                       # cover art
+    "numpy",                        # files silence, merge
+    "pyrekordbox==0.5.0",           # rbsync, files, merge: rekordbox's database
+    "pywebview>=6",                 # `mixarchive app` / `mixarchive-app`: the window
+]
 
 [project.optional-dependencies]
-app = ["pywebview>=6"]              # `mixarchive app` / `mixarchive-app`: the GUI in a window of its own
-rekordbox = ["pyrekordbox==0.5.0"]  # rbsync, files, merge: rekordbox's database
+# empty: both are in the base install now; kept so `mixarchive[app,rekordbox]` still installs
+app = []
+rekordbox = []
 
 [project.urls]
 Homepage = "https://github.com/wolfybird/mixarchive"
