@@ -19,7 +19,7 @@ Built and tested on Windows 10 with rekordbox 7; runs on macOS too.
 
 ## Install
 
-You need Python 3.10 or newer ([python.org](https://www.python.org/downloads/), or
+You need Python 3.11 or newer ([python.org](https://www.python.org/downloads/), or
 `winget install Python.Python.3.14` on Windows) and ffmpeg (`winget install ffmpeg` on
 Windows, `brew install ffmpeg` on macOS). Then, in a terminal:
 
@@ -119,7 +119,7 @@ To start the window with a double-click:
 
 For working on mixarchive itself, or running it from a folder of its own:
 
-1. Python 3.10+:
+1. Python 3.11+:
    `py -3 -m venv venv` then `venv\Scripts\python -m pip install -e ".[app,rekordbox]"`.
    On macOS: `python3 -m venv venv` then `venv/bin/python -m pip install -e ".[app,rekordbox]"`;
    paths below that say `venv\Scripts\` are `venv/bin/` there.

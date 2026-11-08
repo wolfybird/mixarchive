@@ -5,7 +5,7 @@ description = "Archive YouTube channels and long mixes as tagged tracks, and syn
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"     # pyrekordbox 0.5 and current yt-dlp need 3.11
 keywords = ["youtube", "rekordbox", "dj", "mixes", "tracklists", "yt-dlp", "cdj", "xdj"]
 classifiers = [
     "Environment :: Console",
