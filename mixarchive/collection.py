@@ -106,12 +106,20 @@ def library():
     return load_json(settings()["library"], {})
 
 
+def _inside(path, folder):
+    return os.path.normcase(os.path.abspath(path)).startswith(
+        os.path.normcase(os.path.join(os.path.abspath(folder), "")))
+
+
 def library_root():
-    """The folder holding every collection (new ones go here). With none yet: settings'
-    library_root, else Music\\mixarchive in the user's home folder."""
-    if settings()["library_root"]:
-        return settings()["library_root"]
-    roots = list(library().values())
+    """The folder holding every collection (new ones go here): settings' library_root while
+    every collection is inside it, else where they are (after a `move` too); with none yet,
+    library_root or Music/mixarchive in the user's home folder."""
+    s = settings()
+    roots = list(load_json(s["library"], {}).values())
+    pinned = s["library_root"]
+    if pinned and all(_inside(r, pinned) for r in roots):
+        return pinned
     if not roots:
         return os.path.join(os.path.expanduser("~"), "Music", "mixarchive")
     try:
@@ -121,15 +129,15 @@ def library_root():
 
 
 def register(name, root):
-    lib = library()
-    if not lib and not settings()["library_root"]:
+    s = settings()
+    lib = load_json(s["library"], {})
+    if not lib and not s["library_root"]:
         # a new library: keep its folder, so a first collection in a subfolder (labels\...)
         # doesn't become the place the next ones go; one given --root elsewhere sets it
         default, where = library_root(), os.path.abspath(root)
-        inside = os.path.normcase(where).startswith(os.path.normcase(os.path.join(default, "")))
-        save_setting("library_root", default if inside else os.path.dirname(where))
+        save_setting("library_root", default if _inside(where, default) else os.path.dirname(where))
     lib[name] = os.path.abspath(root)
-    save_json(settings()["library"], lib)
+    save_json(s["library"], lib)
 
 
 def known_video_ids(exclude_root=None):

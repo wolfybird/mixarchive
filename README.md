@@ -124,13 +124,13 @@ For working on mixarchive itself, or running it from a folder of its own:
    On macOS: `python3 -m venv venv` then `venv/bin/python -m pip install -e ".[app,rekordbox]"`;
    paths below that say `venv\Scripts\` are `venv/bin/` there.
 2. ffmpeg, as in [Install](#install).
-3. Copy `settings.example.json` to `settings.json` next to the code. With a `settings.json`
-   or `library.json` there, mixarchive keeps its own files in the clone instead of the
-   app-data folder. Every key is optional:
+3. Run from a clone, mixarchive keeps its own files (`settings.json`, `library.json`,
+   `cache`, `tools`) in the clone rather than the app-data folder. For settings, copy
+   `settings.example.json` to `settings.json` and adjust it. Every key is optional:
 
    | key | default | |
    |---|---|---|
-   | `ffmpeg`, `ffprobe` | on PATH, or where winget / Homebrew put them | full paths if they're elsewhere |
+   | `ffmpeg`, `ffprobe` | on PATH, or where winget / Homebrew put them | full paths if they're elsewhere (a path that doesn't exist falls back to the search) |
    | `ytdlp` | the yt-dlp installed with mixarchive | |
    | `rbpython` | `rbvenv\Scripts\python.exe` if there is one, else mixarchive's own Python | the Python with pyrekordbox |
    | `library_root` | `Music\mixarchive` in your home folder | where a new library's collections go |

@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import rbxml, singles
 from .collection import Collection, library, library_root
-from .util import APP_DIR, rekordbox_running, save_setting
+from .util import APP_DIR, console_python, rekordbox_running, save_setting
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
 # the GUI's designs (hybrid is the default; "/" is the classic page, which has the skins); they
@@ -59,7 +59,7 @@ class Job:
             self.started, self.ended = time.time(), None
             self.proc = subprocess.Popen(
                 # -u: -I ignores PYTHONUNBUFFERED, and without it output arrives in 8 KB chunks
-                [sys.executable, "-I", "-u", "-m", "mixarchive", *args], cwd=APP_DIR,
+                [console_python(), "-I", "-u", "-m", "mixarchive", *args], cwd=APP_DIR,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW,
                 start_new_session=os.name != "nt", env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1"))
@@ -106,7 +106,7 @@ class RekordboxStatus:
 
     def _load(self):
         try:
-            r = subprocess.run([sys.executable, "-I", "-m", "mixarchive", "files", "status", "--json"],
+            r = subprocess.run([console_python(), "-I", "-m", "mixarchive", "files", "status", "--json"],
                                cwd=APP_DIR, capture_output=True, text=True, encoding="utf-8",
                                errors="replace", creationflags=NO_WINDOW)
             line = (r.stdout.strip().splitlines() or [""])[-1]
@@ -315,8 +315,8 @@ def window(port=8765, page=DEFAULT_PAGE):
     try:
         import webview
     except ImportError:
-        raise SystemExit("`mixarchive app` needs pywebview: python -m pip install -e .[app] "
-                         "(or use `mixarchive gui` for the browser)")
+        raise SystemExit('The window needs pywebview: pipx install --force "mixarchive[app,rekordbox]" '
+                         '(or pip install "mixarchive[app]"). `mixarchive gui` opens it in the browser.')
 
     server, address, job = make_server(port)
     address = address.replace("/?t=", f"{page}?t=", 1)

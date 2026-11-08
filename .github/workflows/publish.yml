@@ -23,10 +23,11 @@ jobs:
       - name: The tag matches the package version
         run: |
           python - <<'EOF'
-          import os, tomllib
+          import os, re, tomllib
           version = tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]
+          code = re.search(r'__version__ = "([^"]+)"', open("mixarchive/__init__.py").read())[1]
           tag = os.environ["GITHUB_REF_NAME"].removeprefix("v")
-          assert tag == version, f"tag {tag} but pyproject.toml says {version}"
+          assert tag == version == code, f"tag {tag}, pyproject.toml {version}, __init__.py {code}"
           EOF
       - name: Build the sdist and wheel
         run: |

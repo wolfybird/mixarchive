@@ -37,8 +37,8 @@ from . import art, modland, singles, tracklist, yt
 from .collection import Collection, known_video_ids, library, library_root, open_collection, register
 from .split import (FORMATS, TAGGERS, export, gain_db, get_cover, measured, mix_folder,
                     plan, read_image, split_mix, track_name, write_manifest)
-from .util import (AUDIO_EXTS, load_json, mmss, norm, plain_letters, rekordbox_running, require_ffmpeg,
-                   safe_name, slug)
+from .util import (AUDIO_EXTS, has_pyrekordbox, load_json, mmss, norm, plain_letters, rekordbox_running,
+                   require_ffmpeg, safe_name, slug)
 
 PICKS = "youtube-picks"      # where `add` puts single videos given no --to
 
@@ -988,6 +988,9 @@ def cmd_update(a):
         print(f"  {len(failed)} collection(s) stopped early: {', '.join(failed)} - re-run update for them")
     if a.no_rbsync:
         return
+    if not has_pyrekordbox():
+        print('  rekordbox sync skipped: it needs pyrekordbox (pip install "mixarchive[rekordbox]")')
+        return
     if rekordbox_running():
         print("  rekordbox is open: close it, then run `mixarchive rbsync` to add the new tracks")
         return
@@ -1187,8 +1190,24 @@ def main(argv=None):
 
 
 def app_main():
-    """`mixarchive-app`: the window, from a launcher pip makes without a console (Windows)."""
-    main(["app", *sys.argv[1:]])
+    """`mixarchive-app`: the window, from a launcher pip makes without a console (Windows).
+    With no console, an error that stops it is shown in a message box instead."""
+    try:
+        main(["app", *sys.argv[1:]])
+    except SystemExit as e:
+        if e.code not in (None, 0):
+            _no_console_error(e.code if isinstance(e.code, str) else f"mixarchive stopped (exit {e.code})")
+        raise
+    except Exception:
+        import traceback
+        _no_console_error(traceback.format_exc())
+        raise
+
+
+def _no_console_error(text):
+    if sys.stderr is None and os.name == "nt":
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(None, str(text)[-1800:], "mixarchive", 0x10)   # MB_ICONERROR
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 import glob
 import os
 import re
+import shutil
 import subprocess
 import time
 
@@ -40,7 +41,8 @@ def pot_server():
     modules = os.path.join(POT_HOME, "node_modules")
     if _pot_proc or not os.path.isdir(modules):
         return False
-    deno = os.path.join(os.path.dirname(settings()["ytdlp"]), "deno" + EXE)
+    tools = os.path.dirname(settings()["ytdlp"])
+    deno = os.path.join(tools, "deno" + EXE) if tools else shutil.which("deno") or "deno"
     # --allow-sys=ca + DENO_TLS_CA_STORE: the provider's HTTP client (axios) uses the Windows
     # certificate store, so a TLS-inspecting proxy whose root CA is only there still works
     _pot_proc = subprocess.Popen(
@@ -57,9 +59,12 @@ def pot_server():
 
 
 def ffmpeg_location(s):
-    """yt-dlp's --ffmpeg-location for a full ffmpeg path; none when ffmpeg is just on PATH."""
-    d = os.path.dirname(s["ffmpeg"])
-    return ["--ffmpeg-location", d] if d else []
+    """yt-dlp's --ffmpeg-location: ffmpeg's folder, unless it's the ffmpeg on PATH (then yt-dlp
+    finds ffmpeg and ffprobe there itself, even when they're in different folders)."""
+    d, on_path = os.path.dirname(s["ffmpeg"]), shutil.which("ffmpeg")
+    if not d or (on_path and os.path.normcase(on_path) == os.path.normcase(s["ffmpeg"])):
+        return []
+    return ["--ffmpeg-location", d]
 
 
 def _run(args, check=False, log=None, total=None):
@@ -67,7 +72,8 @@ def _run(args, check=False, log=None, total=None):
     "  i/total singles" line goes to stdout as each video starts (the GUI's progress bar)."""
     s = settings()
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
-    env["PATH"] = os.path.dirname(s["ytdlp"]) + os.pathsep + env.get("PATH", "")  # deno
+    if os.path.dirname(s["ytdlp"]):      # deno sits beside it; never an empty entry (= cwd)
+        env["PATH"] = os.path.dirname(s["ytdlp"]) + os.pathsep + env.get("PATH", "")
     cmd = [s["ytdlp"], "--compat-options", "no-certifi"] + args
     if log:
         with open(log, "a", encoding="utf-8") as fh:
