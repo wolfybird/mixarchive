@@ -41,8 +41,10 @@ def pot_server():
     modules = os.path.join(POT_HOME, "node_modules")
     if _pot_proc or not os.path.isdir(modules):
         return False
-    tools = os.path.dirname(settings()["ytdlp"])
-    deno = os.path.join(tools, "deno" + EXE) if tools else shutil.which("deno") or "deno"
+    beside = os.path.join(os.path.dirname(settings()["ytdlp"]), "deno" + EXE)
+    deno = beside if os.path.isfile(beside) else shutil.which("deno")
+    if not deno:
+        return False
     # --allow-sys=ca + DENO_TLS_CA_STORE: the provider's HTTP client (axios) uses the Windows
     # certificate store, so a TLS-inspecting proxy whose root CA is only there still works
     _pot_proc = subprocess.Popen(
@@ -68,25 +70,32 @@ def ffmpeg_location(s):
 
 
 def _run(args, check=False, log=None, total=None):
-    """log: a file path to stream yt-dlp's output to (long batch runs); with total, a
-    "  i/total singles" line goes to stdout as each video starts (the GUI's progress bar)."""
+    """log: a file path to stream yt-dlp's output to (long batch runs); with total, an
+    "  i/total singles" line goes to stdout as each video starts, counting the ones before
+    it as done (the GUI's progress bar), and total/total at the end."""
     s = settings()
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     if os.path.dirname(s["ytdlp"]):      # deno sits beside it; never an empty entry (= cwd)
         env["PATH"] = os.path.dirname(s["ytdlp"]) + os.pathsep + env.get("PATH", "")
     cmd = [s["ytdlp"], "--compat-options", "no-certifi"] + args
     if log:
-        with open(log, "a", encoding="utf-8") as fh:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env,
-                                 stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace")
-            n = 0
-            for line in p.stdout:
-                fh.write(line)
-                if total and "Extracting URL" in line:   # one per video in the batch file
-                    n = min(n + 1, total)
-                    print(f"    {n}/{total} singles", flush=True)
-            p.wait()
-            return p
+        with open(log, "a", encoding="utf-8") as fh, subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, stdin=subprocess.DEVNULL,
+                text=True, encoding="utf-8", errors="replace") as p:
+            try:
+                started = 0
+                for line in p.stdout:
+                    fh.write(line)
+                    if total and "Extracting URL" in line:   # one per video in the batch file
+                        print(f"    {min(started, total)}/{total} singles", flush=True)
+                        started += 1
+                p.wait()
+            except BaseException:     # a full disk, Ctrl+C: don't leave yt-dlp downloading on
+                p.kill()
+                raise
+        if total:
+            print(f"    {total}/{total} singles", flush=True)
+        return p
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
                        errors="replace", env=env)
     if check and r.returncode:

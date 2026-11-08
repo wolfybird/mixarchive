@@ -1,6 +1,6 @@
 [project]
 name = "mixarchive"
-version = "0.2.0"
+version = "0.2.1"
 description = "Archive YouTube channels and long mixes as tagged tracks, and sync them into rekordbox for CDJ/XDJ"
 readme = "README.md"
 license = "MIT"

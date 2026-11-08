@@ -375,7 +375,7 @@ def cmd_fetch(a):
             and not (c.original(s) and os.path.exists(c.original(s)) and not a.force)]
     for i, s in enumerate(todo, 1):
         vid = s["video_id"]
-        print(f"  {i}/{len(todo)} mixes")     # the GUI's progress bar reads these
+        print(f"  {i - 1}/{len(todo)} mixes")     # done so far: the GUI's progress bar reads these
         hdr = tracklist.read(c.tracklist_path(vid))[0] if os.path.exists(c.tracklist_path(vid)) else {}
         name = safe_name(hdr.get("album") or s.get("title") or vid)
         wanted = {norm(name), norm(s.get("title"))}
@@ -403,6 +403,8 @@ def cmd_fetch(a):
             os.makedirs(old_dir, exist_ok=True)
             shutil.move(local, os.path.join(old_dir, s["local_file"]))
         c.save()
+    if todo:
+        print(f"  {len(todo)}/{len(todo)} mixes")
     if failed:
         print(f"  {len(failed)} download(s) failed - re-run fetch to retry: {', '.join(failed)}")
     have = c.single_originals()
@@ -1186,7 +1188,11 @@ def main(argv=None):
     if a.fn in (cmd_run, cmd_update, cmd_fetch, cmd_art, cmd_split, cmd_verify, cmd_merge) or (
             a.fn is cmd_add and a.run):
         require_ffmpeg()          # say how to get it, instead of a traceback halfway through
-    a.fn(a)
+    try:
+        a.fn(a)
+    except FileNotFoundError:     # a program that isn't there: if it's ffmpeg, say how to get it
+        require_ffmpeg()
+        raise
 
 
 def app_main():

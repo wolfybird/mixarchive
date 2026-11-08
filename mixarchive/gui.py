@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import rbxml, singles
 from .collection import Collection, library, library_root
-from .util import APP_DIR, console_python, rekordbox_running, save_setting
+from .util import APP_DIR, NO_WINDOW, console_python, rekordbox_running, save_setting
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
 # the GUI's designs (hybrid is the default; "/" is the classic page, which has the skins); they
@@ -36,7 +36,6 @@ COMMANDS = {"add", "update", "run", "resolve", "tracklists", "fetch", "art", "sp
             "verify", "rbsync", "files", "merge", "list"}
 REKORDBOX_EXE = (r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe" if os.name == "nt"
                  else "/Applications/rekordbox */rekordbox.app")
-NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 class Job:
@@ -56,7 +55,7 @@ class Job:
             if self.running:
                 return False
             self.args, self.lines, self.code = args, [], None
-            self.started, self.ended = time.time(), None
+            self.started, self.ended, self.close_asked = time.time(), None, None
             self.proc = subprocess.Popen(
                 # -u: -I ignores PYTHONUNBUFFERED, and without it output arrives in 8 KB chunks
                 [console_python(), "-I", "-u", "-m", "mixarchive", *args], cwd=APP_DIR,
@@ -86,7 +85,9 @@ class Job:
 
     def state(self, since=0):
         return {"args": self.args, "running": self.running, "code": self.code,
-                "started": self.started, "ended": self.ended, "close_asked": self.close_asked,
+                "started": self.started, "ended": self.ended,
+                # a refused close matters only while that command runs (pages compare it on load)
+                "close_asked": self.close_asked if self.running else None,
                 "total": len(self.lines), "lines": self.lines[since:]}
 
 
@@ -290,10 +291,25 @@ def page_path(page):
     return PAGE_NAMES[name]
 
 
+def stop_job_on_signals(job):
+    """macOS / Linux: the job runs in a session of its own (so Stop can end its whole group),
+    which a closed Terminal (SIGHUP) or a kill (SIGTERM) doesn't reach; end it with us."""
+    if os.name == "nt":
+        return
+
+    def handler(signum, frame):
+        job.stop()
+        raise SystemExit(128 + signum)
+
+    for sig in (signal.SIGHUP, signal.SIGTERM):
+        signal.signal(sig, handler)
+
+
 def serve(port=8765, open_browser=True, page=DEFAULT_PAGE):
     """`mixarchive gui`: the GUI in the browser."""
     page = page_path(page)
     server, address, job = make_server(port)
+    stop_job_on_signals(job)
     address = address.replace("/?t=", f"{page}?t=", 1)
     print(f"mixarchive GUI: {address}\n(keep this window open while you use it; Ctrl+C stops it)", flush=True)
     if open_browser:
@@ -319,6 +335,7 @@ def window(port=8765, page=DEFAULT_PAGE):
                          '(or pip install "mixarchive[app]"). `mixarchive gui` opens it in the browser.')
 
     server, address, job = make_server(port)
+    stop_job_on_signals(job)
     address = address.replace("/?t=", f"{page}?t=", 1)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     print(f"mixarchive app: {address}", flush=True)

@@ -42,7 +42,7 @@ any virtual environment works too. The extras: `app` is the window (pywebview), 
 (pyrekordbox). Without them you still get the command line and `mixarchive gui` in the
 browser.
 
-Until the first release is on PyPI, install from GitHub instead:
+The newest code that isn't released yet installs from GitHub:
 `pipx install "mixarchive[app,rekordbox] @ git+https://github.com/wolfybird/mixarchive"`.
 
 Your collections go in `Music\mixarchive` in your home folder unless you pick another

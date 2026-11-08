@@ -19,8 +19,10 @@ from .split import FORMATS
 
 
 def location(path):
-    return "file://localhost/" + urllib.parse.quote(os.path.abspath(path).replace("\\", "/").lstrip("/"),
-                                                    safe="/:")
+    p = os.path.abspath(path).replace("\\", "/")
+    if p.startswith("/") and not p.startswith("//"):   # POSIX: one slash; a share's // stays
+        p = p[1:]
+    return "file://localhost/" + urllib.parse.quote(p, safe="/:")
 
 
 def _text(tags, key):

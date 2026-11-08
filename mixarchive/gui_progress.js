@@ -12,22 +12,40 @@ window.mxProgress = (() => {
   const COUNT = /^\s+(?:added\s+)?(\d[\d,]*)\/(\d[\d,]*)(?:\s|$)/;   // indented counters only, not titles
   const W = WEIGHT.reduce((a, b) => a + b, 0);
 
-  // text: everything printed so far; args: the command; nCollections: library size
-  return function (text, args, nCollections) {
-    args = args || [];
-    const lines = text.split("\n");
-    let cols = 0, col = "", rb = false, step = -1, stepName = "", count = null;
-    for (const l of lines) {
+  // What the output says so far. Kept between calls (one running command per page), so each
+  // poll reads only the lines added since the last one, not the whole log again.
+  let memo = { key: null, len: 0, st: null };
+  function scan(text, key) {
+    if (memo.key !== key || text.length < memo.len)      // another command, or the log was cleared
+      memo = { key, len: 0, st: { cols: 0, col: "", rb: false, step: -1, stepName: "", count: null } };
+    const st = memo.st, end = text.lastIndexOf("\n") + 1;   // whole lines only
+    if (end <= memo.len) return st;
+    for (const l of text.slice(memo.len, end).split("\n")) {
       let m;
       if ((m = /^===== (.+)$/.exec(l))) {
-        if (m[1] === "rbsync") { rb = true; stepName = "rbsync"; } else { cols++; col = m[1]; stepName = ""; }
-        step = -1; count = null;
+        if (m[1] === "rbsync") { st.rb = true; st.stepName = "rbsync"; } else { st.cols++; st.col = m[1]; st.stepName = ""; }
+        st.step = -1; st.count = null;
       } else if ((m = /^--- (\w+)/.exec(l))) {
-        step++; stepName = m[1]; count = null;
+        st.step++; st.stepName = m[1]; st.count = null;
       } else if ((m = COUNT.exec(l))) {
-        count = [+m[1].replace(/,/g, ""), +m[2].replace(/,/g, "")];
+        st.count = [+m[1].replace(/,/g, ""), +m[2].replace(/,/g, "")];
       }
     }
+    memo.len = end;
+    return st;
+  }
+  // collections `add LINK... --run` goes through: one per channel / playlist, one for the videos
+  function addTotal(args) {
+    const urls = args.filter(a => /^https?:\/\//i.test(a));
+    const own = urls.filter(u => /[?&]list=/.test(u) || /youtube\.com\/(@|c\/|channel\/|user\/)/i.test(u)).length;
+    return own + (urls.length > own ? 1 : 0);
+  }
+
+  // text: everything printed so far; args: the command; nCollections: library size;
+  // started: when the command started (tells a new run of the same command apart)
+  return function (text, args, nCollections, started) {
+    args = args || [];
+    const { cols, col, rb, step, stepName, count } = scan(text, JSON.stringify(args) + " " + started);
     const cmd = args[0] || "";
     const named = args.slice(1).filter(a => !a.startsWith("-"));
     const piped = cmd === "update" || cmd === "run" || (cmd === "add" && args.includes("--run"));
@@ -37,7 +55,8 @@ window.mxProgress = (() => {
         count: count ? `${count[0].toLocaleString()}/${count[1].toLocaleString()}` : "", frac: inner, cells: [], counted: inner != null };
     }
     // how many units of work: each collection, plus rbsync at the end of update
-    const total = cmd === "run" ? 1 : cmd === "update" ? (named.length || nCollections || 1) : Math.max(cols, 1);
+    const total = cmd === "run" ? 1 : cmd === "update" ? (named.length || nCollections || 1)
+      : Math.max(cols, addTotal(args), 1);      // add --run: known up front, so the bar never jumps back
     const units = total + (cmd === "update" && !args.includes("--no-rbsync") ? 1 : 0);
     const s = Math.min(step, STEPS.length - 1);
     let done = 0;
