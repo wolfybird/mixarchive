@@ -423,6 +423,10 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     const upd = () => { $("#npT0").textContent = s.started ? clock(((s.ended || Date.now() / 1000) - s.started)) : "0:00"; };
     upd(); if (s.running) tick = setInterval(upd, 1000);
     $("#npT1").textContent = s.running ? (pct != null ? pct + "%" : "live") : s.ended ? new Date(s.ended * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–";
+    if (s.close_asked && s.close_asked !== S.closeAsked) {   // the app window refused to close mid-command
+      S.closeAsked = s.close_asked;
+      say("A command is still running. Press Stop first, then close the window.");
+    }
     const m = $("#npMain"); m.innerHTML = s.running ? STOP : PLAY;
     m.setAttribute("aria-label", s.running ? "Stop" : "Update all"); m.title = s.running ? "Stop" : "Update all collections";
     gate();

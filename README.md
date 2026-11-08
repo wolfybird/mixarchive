@@ -43,6 +43,17 @@ playlists) and **Library files** (the `files` tool below). It runs the CLI's own
 one at a time, with their output in the panel at the bottom; anything that writes to
 rekordbox is disabled while rekordbox is open, and moves need a second click to confirm.
 
+`mixarchive app` opens the same GUI in a window of its own instead of the browser
+(pywebview: Edge WebView2 on Windows, WebKit on macOS; install it with
+`venv\Scripts\python -m pip install -e .[app]`). The window won't close while a command is
+running - press Stop first. For a double-click start without a console, make a shortcut to
+`venv\Scripts\pythonw.exe -I -m mixarchive app` with the install folder as "Start in".
+
+Both pick a **skin** in the header, kept between runs: **Bare** (the default: black and
+white with one acid accent, light or dark with the system), **Burrow** (wood cheeks, candy
+keys, a small OLED readout), **Field** (grey panel, numbered keys, a green LCD) and
+**Classic** (the original look). `?skin=NAME` in the address overrides it for one visit.
+
 ## Setup
 
 1. Python 3.10+ for mixarchive itself:
@@ -191,6 +202,12 @@ Single videos live in `collection.json` as `source.videos`.
 Mixes with any `--:--:--` line get only a full-mix file until every line has a time.
 `tracklists --force` refreshes the track lines but keeps your `@album/@album_artist/@year/@genre`.
 
+Channels that write titles in styled Unicode letters (`𝗟𝗢𝗦𝗧 𝗢𝗖𝗘𝗔𝗡 沈殿`) show up blank or
+as boxes on many DJ players. `"plain_titles": true` in collection.json makes new tracklists,
+files and tags use plain letters instead (`LOST OCEAN 沈殿`); accents and kanji are kept.
+Set it before a collection's first `split`: on one already split, the next `split` writes
+plain-named copies next to the old files.
+
 Where tracklists come from, best first: YouTube chapters -> timestamps in the description ->
 per-track **lengths** whose total matches the mix (CD listings, also borrowed from sibling
 uploads in the same collection, +-15 s and >=50% track overlap) -> timestamped top comments ->
@@ -219,6 +236,7 @@ to the HLS copy of AAC 128k (format 234: same audio as 140, 16 kHz low-pass).
 | `update [NAME...] [--no-rbsync]` | `run` for every collection (or those named), then `rbsync` if rekordbox is closed |
 | `files status \| audit \| verify \| relocate \| move \| flac \| undo \| flaccopy \| silence ...` | the files behind rekordbox's whole collection (below) |
 | `gui [--port N]` | the browser GUI |
+| `app [--port N]` | the same GUI in a window of its own (needs the `app` extra: pywebview) |
 | `list` | known collections |
 | `move NAME NEWROOT [--delete-old]` | relocate a collection (copy, check sizes, re-register) |
 | `rbsync [NAME...] [--dry-run]` | put tracks + playlists straight into rekordbox's database (rekordbox closed); default: all collections |
@@ -370,6 +388,8 @@ of exporting a same-named different song.
 
 mixarchive's own code is under the MIT licence (see [LICENSE](LICENSE)). It installs and
 uses other projects under their own licences, notably yt-dlp (Unlicense), pyrekordbox (MIT),
-mutagen (GPL-2.0-or-later), Pillow (MIT-CMU), SQLAlchemy (MIT) and sqlcipher3 (zlib); none of
-them is bundled here. Thanks to their authors, and to pyrekordbox in particular for making
+mutagen (GPL-2.0-or-later), Pillow (MIT-CMU), SQLAlchemy (MIT), sqlcipher3 (zlib) and, for
+`mixarchive app`, pywebview (BSD-3-Clause); none of them is bundled here. The GUI's fonts
+(Inter, Inter Tight, JetBrains Mono, Space Mono, Fredoka, VT323; SIL Open Font Licence) load
+from Google Fonts, with system fonts as the fallback offline. Thanks to their authors, and to pyrekordbox in particular for making
 rekordbox's database reachable.

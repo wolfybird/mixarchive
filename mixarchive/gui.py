@@ -41,7 +41,7 @@ class Job:
 
     def __init__(self, on_done):
         self.proc, self.args, self.lines, self.code = None, None, [], None
-        self.started = self.ended = None
+        self.started = self.ended = self.close_asked = None
         self.lock, self.on_done = threading.Lock(), on_done
 
     @property
@@ -80,7 +80,7 @@ class Job:
 
     def state(self, since=0):
         return {"args": self.args, "running": self.running, "code": self.code,
-                "started": self.started, "ended": self.ended,
+                "started": self.started, "ended": self.ended, "close_asked": self.close_asked,
                 "total": len(self.lines), "lines": self.lines[since:]}
 
 
@@ -165,8 +165,8 @@ def open_rekordbox():
     subprocess.Popen(([] if os.name == "nt" else ["open"]) + [exes[-1]], close_fds=True)
 
 
-def serve(port=8765, open_browser=True, window=None):
-    """window: a page path (e.g. "/hybrid") to show in a native window instead of the browser."""
+def make_server(port=8765):
+    """The GUI's server on the first free port from `port` -> (server, address, job)."""
     token = secrets.token_urlsafe(18)
     rb = RekordboxStatus()
     job = Job(on_done=lambda args: rb.refresh() if args and args[0] in ("rbsync", "files", "update", "merge") else None)
@@ -263,18 +263,13 @@ def serve(port=8765, open_browser=True, window=None):
             continue
     else:
         raise SystemExit(f"no free port between {port} and {port + 19}")
-    address = f"http://127.0.0.1:{port}/?t={token}"
+    return server, f"http://127.0.0.1:{port}/?t={token}", job
+
+
+def serve(port=8765, open_browser=True):
+    """`mixarchive gui`: the GUI in the browser."""
+    server, address, job = make_server(port)
     print(f"mixarchive GUI: {address}\n(keep this window open while you use it; Ctrl+C stops it)", flush=True)
-    if window:
-        import webview     # pywebview: a WebKit window on macOS
-        threading.Thread(target=server.serve_forever, daemon=True).start()
-        webview.create_window("mixarchive", f"http://127.0.0.1:{port}{window}?t={token}", width=1280, height=860, min_size=(720, 520))
-        try:
-            webview.start()         # returns when the window is closed
-        finally:
-            job.stop()
-            server.shutdown()
-        return
     if open_browser:
         webbrowser.open(address)
     try:
@@ -283,3 +278,37 @@ def serve(port=8765, open_browser=True, window=None):
         pass
     finally:
         job.stop()
+
+
+def window(port=8765, page="/"):
+    """`mixarchive app`: the same GUI in a window of its own (pywebview: WebView2 on Windows,
+    WebKit on macOS). Closing the window stops the server; while a command runs it stays open
+    and the page says why (Stop first), so a long fetch doesn't die from a stray click.
+    page: which design to open on (a key of PAGES, e.g. "/hybrid")."""
+    if page not in PAGES or page.endswith(".js"):
+        raise SystemExit(f"no such page: {page} (one of {', '.join(p for p in PAGES if not p.endswith('.js'))})")
+    try:
+        import webview
+    except ImportError:
+        raise SystemExit("`mixarchive app` needs pywebview: python -m pip install -e .[app] "
+                         "(or use `mixarchive gui` for the browser)")
+
+    server, address, job = make_server(port)
+    address = address.replace("/?t=", f"{page}?t=", 1)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f"mixarchive app: {address}", flush=True)
+    win = webview.create_window("mixarchive", address, width=1280, height=880, min_size=(860, 600))
+
+    def closing():
+        if job.running:
+            job.close_asked = time.time()
+            return False
+        return True
+
+    win.events.closing += closing
+    try:
+        # private_mode off keeps localStorage (the skin) between runs
+        webview.start(private_mode=False, storage_path=os.path.join(APP_DIR, "cache", "webview"))
+    finally:
+        job.stop()
+        server.shutdown()

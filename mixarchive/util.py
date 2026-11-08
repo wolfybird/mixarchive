@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import time
 import unicodedata
 
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,13 +43,31 @@ def save_json(path, data):
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         json.dump(data, fh, indent=1, ensure_ascii=False)
-    os.replace(tmp, path)
+    for attempt in range(40):    # Windows refuses while another reader (the GUI's refresh) has it open
+        try:
+            return os.replace(tmp, path)
+        except PermissionError:
+            if attempt == 39:
+                raise
+            time.sleep(0.25)
 
 
 def norm(s):
     # NFKD first so accents fold the same way whether a title spells "é" as one
-    # character or as "e" + a combining accent (both occur in YouTube titles)
-    return re.sub(r"[^a-z0-9#]", "", unicodedata.normalize("NFKD", (s or "").lower()))
+    # character or as "e" + a combining accent (both occur in YouTube titles), and
+    # lower() after it: NFKD turns styled letters ("𝗟𝗢𝗦𝗧") into capitals, which the
+    # filter would otherwise drop, leaving only the plain-text part of the title
+    return re.sub(r"[^a-z0-9#]", "", unicodedata.normalize("NFKD", s or "").lower())
+
+
+def plain_letters(s):
+    """'𝗟𝗢𝗦𝗧 𝗢𝗖𝗘𝗔𝗡 沈殿' -> 'LOST OCEAN 沈殿': styled letters and digits (bold / italic /
+    fullwidth...) as plain ones, which DJ players can show; accents, kanji, emoji kept."""
+    out = []
+    for ch in s or "":
+        d = unicodedata.normalize("NFKD", ch)
+        out.append(d if not ch.isascii() and len(d) == 1 and d.isascii() and d.isalnum() else ch)
+    return "".join(out)
 
 
 def safe_name(s):

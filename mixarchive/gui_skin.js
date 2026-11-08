@@ -220,6 +220,10 @@
     const upd = () => set("[data-np-time]", s.started ? clock((s.ended || Date.now() / 1000) - s.started) : "0:00");
     upd(); if (s.running) tick = setInterval(upd, 1000);
     renderProgress(s, args, pre ? pre.textContent : "");
+    if (s.close_asked && s.close_asked !== S.closeAsked) {   // the app window refused to close mid-command
+      S.closeAsked = s.close_asked;
+      say("A command is still running. Press Stop first, then close the window.");
+    }
     if (wasRunning !== s.running) render();
   }
   // progress, drawn by each page's CSS:
