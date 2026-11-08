@@ -37,7 +37,7 @@ from . import art, modland, singles, tracklist, yt
 from .collection import Collection, known_video_ids, library, library_root, open_collection, register
 from .split import (FORMATS, TAGGERS, export, gain_db, get_cover, measured, mix_folder,
                     plan, read_image, split_mix, track_name, write_manifest)
-from .util import AUDIO_EXTS, load_json, mmss, norm, rekordbox_running, safe_name, slug
+from .util import AUDIO_EXTS, load_json, mmss, norm, plain_letters, rekordbox_running, safe_name, slug
 
 PICKS = "youtube-picks"      # where `add` puts single videos given no --to
 
@@ -122,7 +122,8 @@ def _single_row(c, e):
 
 def _mix_meta(c, s, hdr):
     info = c.info(s["video_id"])
-    return {"video_id": s["video_id"], "album": hdr.get("album") or info.get("title") or s["key"],
+    album = hdr.get("album") or info.get("title") or s["key"]
+    return {"video_id": s["video_id"], "album": plain_letters(album) if c.config.get("plain_titles") else album,
             "album_artist": hdr.get("album_artist") or c.config["album_artist"],
             "genre": hdr.get("genre") or c.config["genre"], "upload": _upload(info),
             "year": hdr.get("year", "")}
@@ -320,8 +321,9 @@ def cmd_tracklists(a):
         stem = os.path.splitext(s.get("local_file") or "")[0]
         artist, year = _guess(stem) if stem else ("", "")
         status = "ok" if timed and not untimed else ("needs timestamps" if untimed else "no tracklist")
-        header = {"video": vid, "url": f"https://youtu.be/{vid}", "source": src,
-                  "status": status, "album": stem or info.get("title"),
+        album = stem or info.get("title")
+        header = {"video": vid, "url": f"https://youtu.be/{vid}", "source": src, "status": status,
+                  "album": plain_letters(album) if c.config.get("plain_titles") else album,
                   "album_artist": c.config["album_artist"] or artist, "year": year,
                   "original": s.get("local_file", "")}
         if os.path.exists(path):        # --force refreshes tracks but keeps hand-edited metadata
@@ -364,6 +366,9 @@ def cmd_fetch(a):
     c = open_collection(a.collection)
     old_dir = os.path.join(c.root, c.config["old_dir"])
     failed = []
+    # whose file each original is: a file another mix already has is never adopted or
+    # downloaded over, even when the two titles normalize the same
+    owner = {os.path.normcase(os.path.basename(s["original"])): s["key"] for s in c.sources if s.get("original")}
     for s in _selected(c, a):
         vid = s.get("video_id")
         if not vid or (c.original(s) and os.path.exists(c.original(s)) and not a.force):
@@ -373,11 +378,14 @@ def cmd_fetch(a):
         wanted = {norm(name), norm(s.get("title"))}
         os.makedirs(c.originals, exist_ok=True)
         existing = [f for f in os.listdir(c.originals) if f.lower().endswith((".opus", ".m4a"))
-                    and norm(os.path.splitext(f)[0]) in wanted]
+                    and norm(os.path.splitext(f)[0]) in wanted
+                    and owner.get(os.path.normcase(f), s["key"]) == s["key"]]
         if existing and not a.force:           # already downloaded (e.g. by hand): adopt it
             s["original"] = os.path.relpath(os.path.join(c.originals, existing[0]), c.root)
             print(f"  adopted {existing[0]}")
         else:
+            if any(owner.get(os.path.normcase(name + ext), s["key"]) != s["key"] for ext in (".opus", ".m4a")):
+                name = f"{name} [{vid}]"       # same title as another mix
             print(f"  downloading {vid} -> {name}")
             try:
                 s["original"] = os.path.relpath(yt.download_audio(vid, os.path.join(c.originals, name)),
@@ -386,6 +394,7 @@ def cmd_fetch(a):
                 failed.append(name)
                 print(f"  !! {name}: {e}")
                 continue
+        owner[os.path.normcase(os.path.basename(s["original"]))] = s["key"]
         local = s.get("local_file") and os.path.join(c.config["source"].get("local_dir", ""), s["local_file"])
         if local and os.path.exists(local):
             os.makedirs(old_dir, exist_ok=True)

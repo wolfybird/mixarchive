@@ -26,6 +26,7 @@ DEFAULT_CONFIG = {
     "year_from_upload": True,  # singles without a stated year get their upload year
     "formats": ["mp3"],        # any of: mp3, flac
     "mains": True,             # also write each whole mix to <format>/_full mixes
+    "plain_titles": False,     # mix names with styled letters (𝗟𝗢𝗦𝗧) in plain ones: files + tags
     # rekordbox playlist (rbsync / rbxml): list each mix by its full mix, not its splits;
     # and {mix: playlist} for mixes that get a playlist of their own (splits + full mix)
     "full_mixes": False,
