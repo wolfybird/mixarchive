@@ -1,5 +1,6 @@
 {
- "ffmpeg": "C:\\ffmpeg\\bin\\ffmpeg.exe",
- "ffprobe": "C:\\ffmpeg\\bin\\ffprobe.exe",
+ "ffmpeg": "ffmpeg",
+ "ffprobe": "ffprobe",
+ "library_root": "",
  "usb_mirror": ""
 }

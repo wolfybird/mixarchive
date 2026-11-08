@@ -171,8 +171,20 @@
 
   // ------------------------------------------------------------------ data
   async function loadOverview() {
-    try { const o = await api("/api/overview"); S.cols = o.collections; S.rbOpen = o.rekordbox_running; renderJob(o.job); render(); }
+    try { const o = await api("/api/overview"); S.cols = o.collections; S.rbOpen = o.rekordbox_running; S.root = o.library_root; renderJob(o.job); render(); firstRun(); }
     catch (e) { say(e.message); }
+  }
+  // a new library: show where the music will go, and let it change before the first add
+  function firstRun() {
+    const btnRow = $("#addBtn") && $("#addBtn").closest(".row");
+    let row = $("#rootRow");
+    if (S.cols.length || !btnRow) { if (row) row.remove(); return; }
+    if (row) return;
+    row = document.createElement("div");
+    row.className = "row"; row.id = "rootRow";
+    row.innerHTML = `<span class="tiny">music folder</span><input type="text" id="addRoot" aria-label="Music folder: where your collections go" title="Where your collections go. Later ones go next to the first.">`;
+    btnRow.before(row);
+    $("#addRoot").value = S.root || "";
   }
   async function loadRb(refresh) {
     try {
@@ -275,10 +287,15 @@
   }
   if ($("#urls")) {
     $("#urls").addEventListener("input", () => set("#addPreview", urls().map(u => `<li><span>${esc(u)}</span><em>${kindOf(u)}</em></li>`).join("")));
-    $("#addBtn").addEventListener("click", () => {
+    $("#addBtn").addEventListener("click", async () => {
       const u = urls();
       if (!u.length) return say("Paste at least one link.");
       if (u.some(x => kindOf(x).startsWith("not"))) return say("One of the lines isn't a YouTube channel, playlist or video link.");
+      const root = $("#addRoot") ? $("#addRoot").value.trim() : "";
+      if (root && root !== S.root) {     // first run, folder changed: settings first
+        try { S.root = (await api("/api/settings", { library_root: root })).library_root; }
+        catch (e) { return say(e.message); }
+      }
       const args = ["add", ...u];
       if ($("#addLabel").value.trim()) args.push("--label", $("#addLabel").value.trim());
       if ($("#addGenre").value.trim()) args.push("--genre", $("#addGenre").value.trim());
