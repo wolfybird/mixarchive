@@ -24,6 +24,7 @@ from .collection import Collection, library, library_root
 from .util import APP_DIR, rekordbox_running
 
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
+MUSIC_PAGE = os.path.join(os.path.dirname(PAGE), "gui_music.html")   # test UI, music-app style
 COMMANDS = {"add", "update", "run", "resolve", "tracklists", "fetch", "art", "split", "status",
             "verify", "rbsync", "files", "merge", "list"}
 REKORDBOX_EXE = (r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe" if os.name == "nt"
@@ -182,7 +183,7 @@ def serve(port=8765, open_browser=True):
             # DNS rebinding: only our own host names; CSRF: only requests with the token
             if self.headers.get("Host") not in (f"127.0.0.1:{port}", f"localhost:{port}"):
                 return False
-            given = (parse_qs(url.query).get("t") or [""])[0] if url.path == "/" else self.headers.get("X-Token", "")
+            given = (parse_qs(url.query).get("t") or [""])[0] if url.path in ("/", "/music") else self.headers.get("X-Token", "")
             return secrets.compare_digest(given, token)
 
         def do_GET(self):
@@ -190,8 +191,8 @@ def serve(port=8765, open_browser=True):
             if not self._allowed(url):
                 return self._send(403, {"error": "forbidden"})
             q = parse_qs(url.query)
-            if url.path == "/":
-                with open(PAGE, "rb") as fh:
+            if url.path in ("/", "/music"):
+                with open(PAGE if url.path == "/" else MUSIC_PAGE, "rb") as fh:
                     return self._send(200, fh.read(), "text/html")
             if url.path == "/api/overview":
                 return self._send(200, {**overview(), "job": job.state(len(job.lines))})
