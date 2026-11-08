@@ -422,7 +422,8 @@ footer { grid-area: bar; display: grid; grid-template-columns: minmax(180px, 1fr
     clearInterval(tick);
     const upd = () => { $("#npT0").textContent = s.started ? clock(((s.ended || Date.now() / 1000) - s.started)) : "0:00"; };
     upd(); if (s.running) tick = setInterval(upd, 1000);
-    $("#npT1").textContent = s.running ? (pct != null ? pct + "%" : "live") : s.ended ? new Date(s.ended * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–";
+    const left = p && window.mxEta ? window.mxEta(p, s.started, Date.now() / 1000) : null;   // like a player's −3:20
+    $("#npT1").textContent = s.running ? (left != null ? "−" + clock(left) : pct != null ? pct + "%" : "live") : s.ended ? new Date(s.ended * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–";
     if (s.close_asked && s.close_asked !== S.closeAsked) {   // the app window refused to close mid-command
       S.closeAsked = s.close_asked;
       say("A command is still running. Press Stop first, then close the window.");

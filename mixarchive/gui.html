@@ -513,7 +513,8 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     $("#conProg i").style.width = (pct ?? 0) + "%";
     $("#conProg").setAttribute("aria-valuenow", pct ?? "");
     $("#conProgText").textContent = p ? [p.collection && (p.collections > 1 ? `${p.collection} (${p.collectionNo}/${p.collections})` : p.collection),
-      p.stepNo ? `step ${p.stepNo}/${p.steps}` : "", p.step + (p.count ? " " + p.count : ""), pct != null ? pct + "%" : ""].filter(Boolean).join(" · ") : "";
+      p.stepNo ? `step ${p.stepNo}/${p.steps}` : "", p.step + (p.count ? " " + p.count : ""), pct != null ? pct + "%" : "",
+      window.mxEta ? window.mxLeft(window.mxEta(p, s.started, Date.now() / 1000)) : ""].filter(Boolean).join(" · ") : "";
     if (s.close_asked && s.close_asked !== state.closeAsked) {   // the app window refused to close mid-command
       state.closeAsked = s.close_asked;
       say("A command is still running. Press Stop first, then close the window.");

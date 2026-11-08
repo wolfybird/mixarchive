@@ -34,7 +34,7 @@ window.mxProgress = (() => {
     const inner = count && count[1] ? Math.min(1, count[0] / count[1]) : null;
     if (!piped) {      // rbsync, files, merge...: only the counter, if there is one
       return { cmd, collection: "", step: NAME[cmd] || cmd, stepNo: 0, steps: 0,
-        count: count ? `${count[0].toLocaleString()}/${count[1].toLocaleString()}` : "", frac: inner, cells: [] };
+        count: count ? `${count[0].toLocaleString()}/${count[1].toLocaleString()}` : "", frac: inner, cells: [], counted: inner != null };
     }
     // how many units of work: each collection, plus rbsync at the end of update
     const total = cmd === "run" ? 1 : cmd === "update" ? (named.length || nCollections || 1) : Math.max(cols, 1);
@@ -50,6 +50,32 @@ window.mxProgress = (() => {
       cmd, collection: rb ? "rekordbox" : col, collectionNo: Math.max(cols, 1), collections: total,
       step: NAME[stepName] || stepName || "starting", stepNo: rb ? STEPS.length : s + 1, steps: STEPS.length,
       count: count ? `${count[0].toLocaleString()}/${count[1].toLocaleString()}` : "", frac, cells,
+      counted: inner != null,     // false: frac leans on a guessed "under way" share
     };
   };
 })();
+
+// Seconds left for the running job, or null. Estimated from the pace so far
+// (elapsed / done * left), only while a step reports a real count; in between it keeps
+// counting the last estimate down instead of guessing from a step with no counter.
+window.mxEta = (() => {
+  let last = { started: null, secs: null, at: 0 };
+  return function (p, started, now) {
+    if (!p || !started) return null;
+    if (last.started !== started) last = { started, secs: null, at: 0 };   // a new job
+    const elapsed = now - started;
+    if (p.counted && p.frac > 0.02 && p.frac < 1 && elapsed > 10) {
+      last.secs = elapsed * (1 - p.frac) / p.frac;
+      last.at = now;
+    }
+    return last.secs == null ? null : Math.max(0, last.secs - (now - last.at));
+  };
+})();
+
+// "~4 min left", "under a minute left", "~1 h 20 min left"
+window.mxLeft = secs => {
+  if (secs == null) return "";
+  if (secs < 60) return "under a minute left";
+  const m = Math.round(secs / 60);
+  return m < 60 ? `~${m} min left` : `~${Math.floor(m / 60)} h ${m % 60} min left`;
+};

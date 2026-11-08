@@ -162,7 +162,7 @@ pre#logOut { background: var(--screen); color: #ddd; border-radius: 10px; paddin
     <a href="#" data-go="usb" data-step="usb"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="8" y="3" width="12" height="9"/><rect x="5" y="12" width="18" height="13" rx="2"/></svg><b>usb</b><span class="tiny">05 · to the stick<br><span data-count="usb"></span></span></a>
     <a href="#" data-go="output"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="5" width="22" height="18" rx="2"/><path d="M7 11l4 3-4 3M13 18h7"/></svg><b>output</b><span class="tiny">log of the<br>last command</span></a>
   </nav>
-  <div class="hdr-r tiny"><span data-rb></span><br><span class="mini"><span class="led" data-prog data-prog-cells="12"></span> <span data-prog-pct></span></span><br><select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option><option value="/">classic</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></div>
+  <div class="hdr-r tiny"><span data-rb></span><br><span class="mini"><span class="led" data-prog data-prog-cells="12"></span> <span data-prog-pct></span> <span data-prog-eta></span></span><br><select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option><option value="/">classic</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></div>
 </header>
 
 <main>
@@ -173,7 +173,7 @@ pre#logOut { background: var(--screen); color: #ddd; border-radius: 10px; paddin
         <div class="big" data-np-title>Nothing running</div>
         <div class="ln" data-np-sub></div>
         <div class="led" data-prog data-prog-cells="32"></div>
-        <div class="row1 led-txt"><span data-prog-text></span><span data-prog-pct></span></div>
+        <div class="row1 led-txt"><span data-prog-text></span><span><span data-prog-pct></span> <span data-prog-eta></span></span></div>
         <div style="display:flex;gap:8px"><button data-go="output">output</button><button data-np-stop disabled>stop</button></div>
         <div class="nx"><div class="row1"><span>next · <span data-next-n></span>/5</span><span data-rb></span></div>
           <div><b data-next-title></b> — <span data-next-sub></span></div>

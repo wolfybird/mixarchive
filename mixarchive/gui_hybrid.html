@@ -54,6 +54,7 @@ nav a.is-next sup { color: var(--hl); }
 .leds .cell.lit { background: var(--hl); box-shadow: 0 0 6px var(--hl); }
 .leds .cell.cur { background: color-mix(in srgb, var(--hl) calc(var(--f) * 100%), #2a2a2a); animation: blink 1.2s steps(2) infinite; }
 .pct { font: 800 15px "Arial Narrow", Arial, sans-serif; font-stretch: condensed; color: var(--hl); min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+.eta { font: 11px ui-monospace, Menlo, monospace; color: #9a9a9a; white-space: nowrap; }
 .hair { height: 0; background: linear-gradient(90deg, var(--hl) calc(var(--p) * 1%), #2a2a2a 0); }
 .hair.on { height: 3px; }
 .hair.indet { background: repeating-linear-gradient(90deg, var(--hl) 0 24px, var(--black) 24px 48px); animation: march 1s linear infinite; }
@@ -177,6 +178,7 @@ pre#logOut { background: var(--black); color: #ddd; padding: 16px; min-height: 5
     <span class="sub" data-np-sub></span>
     <span class="leds" data-prog data-prog-cells="steps" title="Steps for this collection"></span>
     <span class="pct" data-prog-pct></span>
+    <span class="eta" data-prog-eta></span>
     <span class="time" data-np-time>0:00</span>
     <button class="btn" data-go="output">Output</button>
     <button class="btn" data-np-stop disabled>Stop</button>

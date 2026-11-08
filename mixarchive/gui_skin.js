@@ -250,6 +250,7 @@
     set("[data-prog-step]", esc(p ? p.step + (p.count ? " " + p.count : "") : ""));
     set("[data-prog-text]", esc(p ? [where, p.step + (p.count ? " " + p.count : "")].filter(Boolean).join(" · ") : ""));
     set("[data-prog-pct]", p ? (pct == null ? "…" : pct + "%") : "");
+    set("[data-prog-eta]", p && window.mxEta ? esc(window.mxLeft(window.mxEta(p, s.started, Date.now() / 1000))) : "");
   }
   $$("[data-np-stop]").forEach(b => b.addEventListener("click", async () => { try { renderJob(await api("/api/stop", {})); } catch (e) { say(e.message); } }));
   function gate() {   // one command at a time; writes to rekordbox only while it's closed

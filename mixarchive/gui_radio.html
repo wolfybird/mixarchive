@@ -47,6 +47,7 @@ nav .is-next:not([aria-current]) { box-shadow: inset 0 -3px var(--hl); }
 .blocks .cell { width: 18px; height: 12px; border: 1px solid var(--ink); background: linear-gradient(90deg, var(--ink) calc(var(--f) * 100%), transparent 0); }
 .blocks .cell.cur { animation: blink 1.2s steps(2) infinite; }
 .pct { font-weight: 900; font-size: 15px; min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+.eta { font: 700 12px "Arial Narrow", "Helvetica Neue", Arial, sans-serif; font-stretch: condensed; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .hair { height: 0; background: linear-gradient(90deg, var(--ink) calc(var(--p) * 1%), var(--dim) 0); }
 .hair.on { height: 3px; border-bottom: 1px solid var(--rule); }
 .hair.indet { background: repeating-linear-gradient(90deg, var(--ink) 0 24px, var(--bg) 24px 48px); background-size: 48px 100%; animation: march 1s linear infinite; }
@@ -166,6 +167,7 @@ pre#logOut { margin: 0 12px; border: 1px solid var(--rule); padding: 12px; min-h
     <span class="sub" data-np-sub></span>
     <span class="blocks" data-prog data-prog-cells="steps" title="Steps for this collection"></span>
     <span class="pct cond" data-prog-pct></span>
+    <span class="eta" data-prog-eta></span>
     <span class="time" data-np-time>0:00</span>
     <button class="btn small" data-go="output">Output</button>
     <button class="btn small" data-np-stop disabled>Stop</button>
