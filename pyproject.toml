@@ -7,6 +7,9 @@ license = {text = "MIT"}
 requires-python = ">=3.10"
 dependencies = ["yt-dlp[default]", "deno", "mutagen", "pillow"]
 
+[project.optional-dependencies]
+app = ["pywebview>=6"]      # `mixarchive app`: the GUI in a window of its own
+
 [project.scripts]
 mixarchive = "mixarchive.cli:main"
 

@@ -20,7 +20,7 @@ Pipeline per collection (each step is resumable and skips finished work):
 Around it: `add` turns YouTube links into collections (videos: youtube-picks), `update`
 runs every collection then `rbsync` (tracks + playlists into rekordbox), `files` checks /
 moves the files behind rekordbox's collection, `merge` merges one rekordbox playlist into
-another, and `gui` does all of it in the browser.
+another, and `gui` does all of it in the browser (`app`: in a window of its own, with skins).
 """
 import argparse
 import csv
@@ -993,6 +993,11 @@ def cmd_gui(a):
     gui.serve(a.port, open_browser=not a.no_browser)
 
 
+def cmd_app(a):
+    from . import gui
+    gui.window(a.port)
+
+
 def cmd_move(a):
     """Move a collection to a new root (e.g. another drive). Every path inside a
     collection is relative, so this is copy -> check sizes -> re-register; the old
@@ -1155,8 +1160,13 @@ def main(argv=None):
     p.add_argument("--no-browser", action="store_true", help="just print its address")
     p.set_defaults(fn=cmd_gui)
 
+    p = sub.add_parser("app", help="open the GUI in a window of its own (needs pywebview)")
+    p.add_argument("--port", type=int, default=8765)
+    p.set_defaults(fn=cmd_app)
+
     for stream in (sys.stdout, sys.stderr):     # titles with emoji / math letters on cp1252
-        stream.reconfigure(encoding="utf-8", errors="replace")
+        if stream:                              # None under pythonw (the app's shortcut)
+            stream.reconfigure(encoding="utf-8", errors="replace")
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["files"]:      # the rest (incl. --help) belongs to rbfiles.py
         return cmd_files(argparse.Namespace(args=argv[1:]))
