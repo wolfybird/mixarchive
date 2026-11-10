@@ -100,7 +100,7 @@ def _resolved(name, configured):
 @functools.lru_cache(maxsize=None)
 def _rbpython():
     """The Python that runs rbdb / rbfiles / rbmerge (pyrekordbox): an rbvenv beside the data
-    (the older two-environment setup), else this one (`pip install "mixarchive[rekordbox]"`)."""
+    (the older two-environment setup), else this one (pyrekordbox comes with mixarchive)."""
     old = os.path.join(APP_DIR, "rbvenv", BIN, "python" + EXE)
     return old if os.path.isfile(old) else console_python()
 
@@ -159,10 +159,30 @@ def has_pyrekordbox():
     return settings()["rbpython"] != console_python() or importlib.util.find_spec("pyrekordbox") is not None
 
 
+def reinstall_hint():
+    """The command that puts back a package mixarchive comes with, for how it's installed:
+    a clone's editable install (pip install -e, never the PyPI copy over it), pipx, or pip."""
+    def q(path):     # quoted only when needed; PowerShell runs a quoted program with "& "
+        if " " not in path:
+            return path
+        return ("& " if os.name == "nt" else "") + f'"{path}"'
+
+    py = console_python()
+    checkout = os.path.dirname(PKG_DIR)
+    if os.path.isfile(os.path.join(checkout, "pyproject.toml")):
+        target = checkout if " " not in checkout else f'"{checkout}"'
+        return f"{q(py)} -m pip install -e {target}"
+    if os.path.isfile(os.path.join(sys.prefix, "pipx_metadata.json")):
+        # adds what's missing to the same environment (a full `pipx reinstall` rebuilds it,
+        # possibly on another Python)
+        return "pipx runpip mixarchive install mixarchive"
+    return f"{q(py)} -m pip install mixarchive"      # installs whatever it's missing
+
+
 def require_pyrekordbox():
     if not has_pyrekordbox():
-        raise SystemExit('this needs pyrekordbox: pip install "mixarchive[rekordbox]" '
-                         '(with pipx: pipx install --force "mixarchive[app,rekordbox]")')
+        raise SystemExit(f"this needs pyrekordbox, which comes with mixarchive; put it back with: "
+                         f"{reinstall_hint()}")
 
 
 def load_json(path, default=None):

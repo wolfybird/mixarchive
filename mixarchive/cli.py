@@ -38,7 +38,7 @@ from .collection import Collection, known_video_ids, library, library_root, open
 from .split import (FORMATS, TAGGERS, export, gain_db, get_cover, measured, mix_folder,
                     plan, read_image, split_mix, track_name, write_manifest)
 from .util import (AUDIO_EXTS, has_pyrekordbox, load_json, mmss, norm, plain_letters, rekordbox_running,
-                   require_ffmpeg, safe_name, slug)
+                   reinstall_hint, require_ffmpeg, safe_name, slug)
 
 PICKS = "youtube-picks"      # where `add` puts single videos given no --to
 
@@ -991,7 +991,7 @@ def cmd_update(a):
     if a.no_rbsync:
         return
     if not has_pyrekordbox():
-        print('  rekordbox sync skipped: it needs pyrekordbox (pip install "mixarchive[rekordbox]")')
+        print(f"  rekordbox sync skipped: pyrekordbox is missing; put it back with: {reinstall_hint()}")
         return
     if rekordbox_running():
         print("  rekordbox is open: close it, then run `mixarchive rbsync` to add the new tracks")
