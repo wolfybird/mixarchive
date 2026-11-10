@@ -162,13 +162,21 @@ def has_pyrekordbox():
 def reinstall_hint():
     """The command that puts back a package mixarchive comes with, for how it's installed:
     a clone's editable install (pip install -e, never the PyPI copy over it), pipx, or pip."""
+    def q(path):     # quoted only when needed; PowerShell runs a quoted program with "& "
+        if " " not in path:
+            return path
+        return ("& " if os.name == "nt" else "") + f'"{path}"'
+
     py = console_python()
     checkout = os.path.dirname(PKG_DIR)
     if os.path.isfile(os.path.join(checkout, "pyproject.toml")):
-        return f'"{py}" -m pip install -e "{checkout}"'
+        target = checkout if " " not in checkout else f'"{checkout}"'
+        return f"{q(py)} -m pip install -e {target}"
     if os.path.isfile(os.path.join(sys.prefix, "pipx_metadata.json")):
-        return "pipx reinstall mixarchive"
-    return f'"{py}" -m pip install mixarchive'      # installs whatever it's missing
+        # adds what's missing to the same environment (a full `pipx reinstall` rebuilds it,
+        # possibly on another Python)
+        return "pipx runpip mixarchive install mixarchive"
+    return f"{q(py)} -m pip install mixarchive"      # installs whatever it's missing
 
 
 def require_pyrekordbox():

@@ -38,7 +38,7 @@ jobs:
           wheel=$(ls dist/*.whl)
           "$bin/python" -m pip install "$wheel"
           # the old install line, with the (now empty) extras, still resolves without a warning
-          "$bin/python" -m pip install --dry-run "${wheel}[app,rekordbox]" > "$RUNNER_TEMP/extras.log" 2>&1
+          "$bin/python" -m pip install --dry-run "${wheel}[app,rekordbox]" > "$RUNNER_TEMP/extras.log" 2>&1 || { cat "$RUNNER_TEMP/extras.log"; exit 1; }
           if grep -qi "does not provide the extra" "$RUNNER_TEMP/extras.log"; then cat "$RUNNER_TEMP/extras.log"; exit 1; fi
       - name: Run it from outside the checkout
         shell: bash
