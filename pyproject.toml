@@ -36,6 +36,8 @@ rekordbox = []
 [project.urls]
 Homepage = "https://github.com/wolfybird/mixarchive"
 Issues = "https://github.com/wolfybird/mixarchive/issues"
+"Ko-fi" = "https://ko-fi.com/rfrank"
+"Buy Me a Coffee" = "https://buymeacoffee.com/wolfybird"
 
 [project.scripts]
 mixarchive = "mixarchive.cli:main"

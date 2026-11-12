@@ -463,6 +463,15 @@ emulation, 50% stereo, 48 kHz; needs `openmpt123`) and **verifies each render's 
 against the mix's track** (+-12% / 20 s), trying alternates and marking `mismatch` instead
 of exporting a same-named different song.
 
+## Buy us a coffee
+
+lots of hard work went into the making, testing and refining of these DJ tools. if you're able to
+do so, buy us a coffee or a drink to thank us, we'd greatly appreciate it! thank you for giving
+them a try, we hope you enjoy using them and that they inspire creativity and save a lot of
+trouble. have a good set and happy playing. ~rfrank
+
+[Ko-fi](https://ko-fi.com/rfrank) · [Buy Me a Coffee](https://buymeacoffee.com/wolfybird)
+
 ## Licence
 
 mixarchive's own code is under the MIT licence (see [LICENSE](LICENSE)). It installs and
