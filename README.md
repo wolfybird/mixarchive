@@ -125,6 +125,23 @@ The classic page's header picks a **skin** and **light or dark**, both kept betw
 The **Dark** switch overrides the system's light or dark setting. `?skin=NAME` and
 `?theme=light|dark` in the address override them for one visit.
 
+**Winamp skins:** *more… › Winamp skins…* opens a panel with two ways to add a classic Winamp
+skin (`.wsz`):
+- **Find skins** searches the Internet Archive's collection of over 100,000 of them, most
+  downloaded first. **Get** fetches one.
+- **Open a skin file** adds one you already have.
+
+From a skin, mixarchive takes:
+- its colours: the playlist's text, background and highlight, and the visualizer's colours
+  for the signals;
+- its title bar, across the top;
+- its digits, for the numbers;
+- its seek bar, for the progress bar.
+
+Skins are other people's artwork. They're kept in mixarchive's data folder with their readme
+(the author's credits), and nothing in a skin is ever run. Modern (`.wal`) skins aren't
+supported. `?skin=winamp:ID` opens one for a visit.
+
 To start the window with a double-click:
 - **Windows:** `mixarchive-app.exe` starts it without a console window. pipx puts it in
   `%USERPROFILE%\.local\bin`, a clone in `venv\Scripts`; make a desktop or Start menu

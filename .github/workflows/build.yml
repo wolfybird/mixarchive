@@ -74,6 +74,9 @@ jobs:
           server.shutdown()
           print("ok")
           EOF
+      - name: Unit tests
+        shell: bash
+        run: '"$BIN/python" -m unittest discover -s tests'
 
   old-python:
     runs-on: ubuntu-latest
