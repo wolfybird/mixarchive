@@ -17,9 +17,9 @@ import time
 import webbrowser
 from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
-from . import rbxml, singles
+from . import rbxml, singles, skins
 from .collection import Collection, library, library_root
 from .util import APP_DIR, NO_WINDOW, console_python, reinstall_hint, rekordbox_running, save_setting
 
@@ -197,7 +197,8 @@ def make_server(port=8765):
             # DNS rebinding: only our own host names; CSRF: only requests with the token
             if self.headers.get("Host") not in (f"127.0.0.1:{port}", f"localhost:{port}"):
                 return False
-            given = (parse_qs(url.query).get("t") or [""])[0] if url.path in PAGES else self.headers.get("X-Token", "")
+            in_address = url.path in PAGES or url.path.startswith("/skins/")     # pages and skin images
+            given = (parse_qs(url.query).get("t") or [""])[0] if in_address else self.headers.get("X-Token", "")
             return secrets.compare_digest(given, token)
 
         def do_GET(self):
@@ -219,16 +220,45 @@ def make_server(port=8765):
                 return self._send(200, job.state(int((q.get("from") or ["0"])[0])))
             if url.path == "/api/journals":
                 return self._send(200, journals())
+            if url.path == "/api/skins":
+                return self._send(200, {"skins": skins.list_skins()})
+            if url.path.startswith("/skins/"):          # /skins/<id>/<bitmap>.bmp
+                parts = url.path.split("/")
+                path = skins.asset(parts[2], parts[3]) if len(parts) == 4 else None
+                if path:
+                    with open(path, "rb") as fh:
+                        return self._send(200, fh.read(), "image/bmp")
             self._send(404, {"error": "not found"})
 
         def do_POST(self):
             url = urlparse(self.path)
             if not self._allowed(url):
                 return self._send(403, {"error": "forbidden"})
+            length = int(self.headers.get("Content-Length") or 0)
+            if length > skins.MAX_SKIN + 1024:
+                return self._send(413, {"error": "too big"})
+            raw = self.rfile.read(length)
+            if url.path == "/api/skins/import":          # the body is the .wsz itself
+                try:
+                    return self._send(200, skins.import_bytes(raw, unquote(self.headers.get("X-Name", "skin.wsz"))))
+                except skins.SkinError as e:
+                    return self._send(400, {"error": str(e)})
             try:
-                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                body = json.loads(raw or b"{}")
             except ValueError:
                 return self._send(400, {"error": "bad json"})
+            if url.path in ("/api/skins/search", "/api/skins/get", "/api/skins/remove"):
+                try:
+                    if url.path.endswith("search"):
+                        return self._send(200, skins.search(str(body.get("q", "")), int(body.get("page", 1))))
+                    if url.path.endswith("get"):
+                        return self._send(200, skins.fetch(str(body.get("identifier", ""))))
+                    skins.remove(str(body.get("id", "")))
+                    return self._send(200, {"ok": True})
+                except skins.SkinError as e:
+                    return self._send(400, {"error": str(e)})
+                except (OSError, ValueError, KeyError) as e:
+                    return self._send(502, {"error": f"the Internet Archive didn't answer ({e})"})
             if url.path == "/api/run":
                 args = body.get("args")
                 if not (isinstance(args, list) and args and all(isinstance(x, str) for x in args)

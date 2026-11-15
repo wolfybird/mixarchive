@@ -14,7 +14,16 @@
       skin = skin || localStorage.getItem("mixarchive-skin");
       theme = theme || localStorage.getItem("mixarchive-theme");
     } catch (e) { /* storage blocked */ }
-    document.documentElement.dataset.skin = ["bare", "burrow", "field", "classic"].includes(skin) ? skin : "bare";
+    if (skin && skin.startsWith("winamp:")) {            // ?skin=winamp:<id>: that skin, for this visit
+      document.documentElement.dataset.waId = skin.slice(7);
+      skin = "winamp";
+    } else if (skin === "winamp") {      // a Winamp skin: its colours now, its pictures once the page runs
+      try {
+        const saved = JSON.parse(localStorage.getItem("mixarchive-winamp"));
+        for (const [k, v] of Object.entries(saved.tokens)) document.documentElement.style.setProperty(k, v);
+      } catch (e) { skin = "bare"; }
+    }
+    document.documentElement.dataset.skin = ["bare", "burrow", "field", "classic", "winamp"].includes(skin) ? skin : "bare";
     if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
   })();
 </script>
@@ -64,6 +73,19 @@ header h1 { font-size: 17px; margin: 0 8px 0 0; letter-spacing: .2px; }
 .switch[aria-checked="true"] .track::after { left: 16px; }
 .switch:disabled { opacity: .45; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { .switch .track::after { transition: none; } }
+.dlg { position: fixed; inset: 0; z-index: 9; background: rgba(0,0,0,.45); display: grid; place-items: start center;
+  padding: 6vh 16px; overflow: auto; }
+.dlg[hidden] { display: none; }
+.dlg-box { background: var(--panel); color: var(--ink); border: var(--bw) solid var(--line); border-radius: var(--radius);
+  width: min(940px, 100%); padding: 16px 18px; }
+.dlg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dlg-head h2 { margin: 0; font-size: 17px; }
+.skin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin: 8px 0 12px; }
+.skin-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.skin-card img { width: 100%; height: auto; border: var(--bw) solid var(--line); background: var(--chip); }
+.skin-card img.px { image-rendering: pixelated; background: #000; }
+.skin-card pre { white-space: pre-wrap; max-height: 160px; overflow: auto; margin: 4px 0 0; font: 11.5px/1.4 var(--mono); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-pill);
   background: var(--chip); font-size: 12.5px; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
@@ -269,6 +291,19 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
 [data-skin=field] input[type=text], [data-skin=field] textarea, [data-skin=field] select { background: var(--well); border: 0;
   box-shadow: inset 0 2px 0 rgba(0,0,0,.1); }
 
+/* ---------------------------------------------------------------- Winamp: a classic Winamp skin's
+   own colours (set on <html> by the page from its pledit.txt, viscolor.txt and main.bmp), its title
+   bar across the top, its digits for the numbers, its seek bar for progress */
+:root[data-skin=winamp] { --radius: 0; --radius-ctl: 0; --radius-pill: 0; --bw: 1px; }
+[data-skin=winamp] header { padding-top: 40px; image-rendering: pixelated;
+  background: var(--wa-strip, none) center top / 550px 28px no-repeat,
+              var(--wa-strip-fill, none) left top / 2px 28px repeat-x, var(--panel); }
+[data-skin=winamp] .wa-d { display: inline-block; width: 18px; height: 26px; vertical-align: -5px;
+  background: var(--wa-numbers) 0 0 / 198px 26px no-repeat; image-rendering: pixelated; }
+[data-skin=winamp] #console .cprog { width: 248px; height: 10px; border-radius: 0; image-rendering: pixelated;
+  background: var(--wa-posbar, var(--code-line)) 0 0 / 248px 10px no-repeat; }
+[data-skin=winamp] #console .cprog i { background: var(--accent); opacity: .7; border-radius: 0; }
+
 @media (max-width: 860px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .flow { grid-template-columns: 1fr; } main { padding: 12px 16px; } header { padding: 10px 16px; } }
 </style>
@@ -282,7 +317,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   <span class="muted small" id="libRoot"></span>
   <span class="skinpick" role="group" aria-label="Skin">Skin
     <span class="seg"><button type="button" data-skin="bare">Bare</button><button type="button" data-skin="field">Field</button></span>
-    <select id="skinMore" aria-label="More skins"><option value="">more…</option><option value="burrow">Burrow</option><option value="classic">Classic</option></select></span>
+    <select id="skinMore" aria-label="More skins"><option value="">more…</option><option value="burrow">Burrow</option><option value="classic">Classic</option><option value="winamp">Winamp skins…</option></select></span>
   <button type="button" class="switch" id="theme" role="switch" aria-checked="false"><span class="track" aria-hidden="true"></span>Dark</button>
   <label class="skinpick">Design
     <select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/">classic</option><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></label>
@@ -473,6 +508,25 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   </div>
   <pre id="conOut"></pre>
 </section>
+<div id="skinsDlg" class="dlg" role="dialog" aria-modal="true" aria-labelledby="skinsTitle" hidden>
+  <div class="dlg-box">
+    <div class="dlg-head"><h2 id="skinsTitle">Winamp skins</h2><button class="btn small" type="button" data-close>Close</button></div>
+    <p class="muted small">Classic Winamp skins (.wsz) are other people's artwork from the Winamp community. mixarchive keeps the
+      ones you add in its data folder, with their credits, and takes their colours, title bar, digits and seek bar.
+      Nothing in a skin is ever run.</p>
+    <h3>Yours</h3>
+    <div id="skinList" class="skin-grid"></div>
+    <div class="toolbar"><button class="btn" type="button" id="skinOpen">Open a skin file…</button>
+      <input type="file" id="skinFile" accept=".wsz,.zip" hidden></div>
+    <h3>Find skins</h3>
+    <form id="skinSearch" class="toolbar" role="search">
+      <input type="text" id="skinQ" placeholder="neon, chrome, amp…" aria-label="Search Winamp skins" style="max-width: 320px">
+      <button class="btn primary" type="submit">Search</button></form>
+    <div id="skinResults" class="skin-grid"></div>
+    <div class="toolbar"><button class="btn small" type="button" id="skinMoreResults" hidden>More results</button></div>
+    <p class="muted small">Searches the Internet Archive's Winamp skin collection (archive.org), most downloaded first.</p>
+  </div>
+</div>
 <div id="toast" role="alert" hidden></div>
 
 <script>{ const s = document.createElement("script"); s.src = "/progress.js" + location.search; document.head.append(s); }</script>
@@ -502,21 +556,205 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   // ------------------------------------------------------------ skin, and light or dark
   const root = document.documentElement, systemDark = matchMedia("(prefers-color-scheme: dark)");
   const remember = (key, value) => { try { localStorage.setItem(key, value); } catch (err) { /* this visit only */ } };
+  let waSet = [], waName = "", waId = "";                 // the CSS variables a Winamp skin put on <html>
   function showSkin() {
-    for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.skin === root.dataset.skin));
-    $("#skinMore").value = ["burrow", "classic"].includes(root.dataset.skin) ? root.dataset.skin : "";
+    const s = root.dataset.skin;
+    for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.skin === s));
+    $("#skinMore").value = ["burrow", "classic", "winamp"].includes(s) ? s : "";
+    $("#skinMore").options[3].textContent = s === "winamp" && waName ? `Winamp: ${waName}` : "Winamp skins…";
     const dark = root.dataset.theme ? root.dataset.theme === "dark" : systemDark.matches;
-    $("#theme").setAttribute("aria-checked", String(dark || root.dataset.skin === "burrow"));
-    $("#theme").disabled = root.dataset.skin === "burrow";              // Burrow is dark only
-    $("#theme").title = root.dataset.skin === "burrow" ? "Burrow comes in dark only" : "";
+    $("#theme").setAttribute("aria-checked", String(s === "burrow" || (s !== "winamp" && dark)));
+    $("#theme").disabled = s === "burrow" || s === "winamp";
+    $("#theme").title = s === "burrow" ? "Burrow comes in dark only" : s === "winamp" ? "a Winamp skin brings its own colours" : "";
   }
+  function clearWinamp() { for (const k of waSet) root.style.removeProperty(k); waSet = []; waId = ""; }
   function setSkin(skin) {
+    clearWinamp();
     root.dataset.skin = skin;
     remember("mixarchive-skin", skin);
     showSkin();
+    waDigits();
   }
   for (const b of document.querySelectorAll(".seg button")) b.addEventListener("click", () => setSkin(b.dataset.skin));
-  $("#skinMore").addEventListener("change", e => { if (e.target.value) setSkin(e.target.value); });
+  $("#skinMore").addEventListener("change", e => {
+    if (e.target.value === "winamp") { showSkin(); openSkins(); }      // the skin stays until one is picked
+    else if (e.target.value) setSkin(e.target.value);
+  });
+
+  // ------------------------------------------------------------ Winamp skins
+  const skinFile = (id, name) => `/skins/${encodeURIComponent(id)}/${name}.bmp?t=${encodeURIComponent(token)}`;
+  const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+  const loadImage = src => new Promise((ok, bad) => {
+    const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("its bitmaps didn't load")); i.src = src; });
+  function crop(img, x, y, w, h) {
+    const c = el("canvas", { width: w, height: h });
+    c.getContext("2d").drawImage(img, x, y, w, h, 0, 0, w, h);
+    return c;
+  }
+  const hex = (...v) => "#" + v.map(x => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, "0")).join("");
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const lum = h => { const c = rgb(h).map(v => (v /= 255) <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+    return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+  const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+  const mix = (a, b, t) => { const p = rgb(a), q = rgb(b); return hex(...p.map((v, i) => v + (q[i] - v) * t)); };
+  const readable = (fg, bg) => contrast(fg, bg) >= 4.5 ? fg : (lum(bg) > .3 ? "#000000" : "#ffffff");
+  function average(img) {
+    const d = crop(img, 0, 0, img.width, img.height).getContext("2d").getImageData(0, 0, img.width, img.height).data;
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let i = 0; i < d.length; i += 16) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+    return hex(r / n, g / n, b / n);
+  }
+  function winampTokens(skin, mainAvg) {
+    // the playlist's colours (pledit.txt) lead; the visualizer's (viscolor.txt) give the signals
+    const c = skin.colors || {}, v = skin.vis || [];
+    const bg = c.normalbg || mix(mainAvg, "#000000", .55);
+    const ink = readable(c.normal || (lum(bg) > .3 ? "#111111" : "#e8e8e8"), bg);
+    const panel = mix(bg, ink, .07), accent = c.current || v[2] || "#ffc23d", code = v[0] || "#000000";
+    return {
+      "--bg": bg, "--panel": panel, "--ink": ink, "--muted": readable(mix(ink, bg, .3), panel),
+      "--line": mix(bg, ink, .32), "--row-line": mix(bg, ink, .16), "--chip": c.selectedbg || mix(bg, ink, .14),
+      "--accent": accent, "--accent-ink": lum(accent) > .3 ? "#000000" : "#ffffff",
+      "--good": v[17] || "#2fbf5a", "--warn": v[9] || "#e0b000", "--bad": v[2] || "#e0402f",
+      "--code": code, "--code-ink": readable(c.normal || "#00e000", code), "--code-line": mix(code, ink, .35),
+      "--font": c.font ? `"${c.font}", system-ui, sans-serif` : "system-ui, sans-serif",
+    };
+  }
+  function setVars(vars) {
+    for (const [k, v] of Object.entries(vars)) { root.style.setProperty(k, v); if (!waSet.includes(k)) waSet.push(k); }
+  }
+  async function useWinamp(skin, quiet) {
+    try {
+      const main = await loadImage(skinFile(skin.id, "main"));
+      const tokens = winampTokens(skin, average(main)), art = {};
+      if (skin.bitmaps.includes("titlebar")) {           // its title bar at 2x, a sliver of it fills the width
+        const t = await loadImage(skinFile(skin.id, "titlebar"));
+        art["--wa-strip"] = `url(${crop(t, 27, 0, 275, 14).toDataURL()})`;
+        art["--wa-strip-fill"] = `url(${crop(t, 27 + 40, 0, 1, 14).toDataURL()})`;
+      }
+      if (skin.bitmaps.includes("posbar"))
+        art["--wa-posbar"] = `url(${crop(await loadImage(skinFile(skin.id, "posbar")), 0, 0, 248, 10).toDataURL()})`;
+      if (skin.bitmaps.includes("numbers")) art["--wa-numbers"] = `url("${skinFile(skin.id, "numbers")}")`;
+      clearWinamp();
+      root.dataset.skin = "winamp";
+      setVars({ ...tokens, ...art });
+      waName = skin.name; waId = skin.id;
+      remember("mixarchive-skin", "winamp");
+      remember("mixarchive-winamp", JSON.stringify({ id: skin.id, name: skin.name, tokens }));
+      showSkin();
+      waDigits();
+    } catch (e) {
+      if (!quiet) say(`couldn't use that skin: ${e.message || e}`);
+    }
+  }
+  function waDigits() {                                   // the stats in the skin's own digits
+    const on = root.dataset.skin === "winamp" && waSet.includes("--wa-numbers");
+    for (const v of document.querySelectorAll(".stat .v")) {
+      const text = v.dataset.text ?? v.textContent;
+      if (!on) { if (v.dataset.text !== undefined) { v.textContent = text; delete v.dataset.text; } continue; }
+      if (v.dataset.text === text && v.querySelector(".wa-d")) continue;
+      v.dataset.text = text;
+      const shown = el("span", { ariaHidden: "true" });
+      for (const ch of text) {
+        if (/[0-9]/.test(ch)) shown.append(el("span", { className: "wa-d" }));
+        else shown.append(ch);
+        if (/[0-9]/.test(ch)) shown.lastChild.style.backgroundPositionX = `${-18 * Number(ch)}px`;
+      }
+      v.replaceChildren(el("span", { className: "sr", textContent: text }), shown);
+    }
+  }
+  new MutationObserver(waDigits).observe($("#rbStats"), { childList: true });
+
+  function openSkins() { $("#skinsDlg").hidden = false; renderSkins(); $("#skinQ").focus(); }
+  function closeSkins() { $("#skinsDlg").hidden = true; $("#skinMore").focus(); }
+  $("#skinsDlg").addEventListener("click", e => {
+    if (e.target === e.currentTarget || e.target.closest("[data-close]")) closeSkins(); });
+  $("#skinsDlg").addEventListener("keydown", e => { if (e.key === "Escape") closeSkins(); });
+  function useButton(skin) {
+    const b = el("button", { className: "btn small primary", type: "button", textContent: "Use" });
+    b.addEventListener("click", () => { useWinamp(skin); closeSkins(); });
+    return b;
+  }
+  async function renderSkins() {
+    const list = $("#skinList");
+    let skins;
+    try { skins = (await api("/api/skins")).skins; } catch (e) { list.replaceChildren(e.message); return; }
+    if (!skins.length) {
+      list.replaceChildren(el("p", { className: "muted small", textContent: "None yet: open a skin file, or find one below." }));
+      return;
+    }
+    list.replaceChildren(...skins.map(s => {
+      const from = s.source && s.source.url
+        ? el("a", { href: s.source.url, target: "_blank", rel: "noopener", textContent: "from the Internet Archive" })
+        : el("span", { textContent: "from a file" });
+      const remove = el("button", { className: "btn small", type: "button", textContent: "Remove" });
+      remove.addEventListener("click", async () => {
+        try { await api("/api/skins/remove", { id: s.id }); if (s.id === waId) setSkin("bare"); renderSkins(); }
+        catch (e) { say(e.message); }
+      });
+      const card = el("div", { className: "skin-card" },
+        el("img", { className: "px", alt: `${s.name}: the main window`, width: 275, height: 116, src: skinFile(s.id, "main") }),
+        el("b", { textContent: s.name }), el("span", { className: "muted small" }, from),
+        el("div", { className: "toolbar" }, useButton(s), remove));
+      if (s.readme) card.append(el("details", {}, el("summary", { className: "small", textContent: "Credits (its readme)" }),
+        el("pre", { textContent: s.readme })));
+      return card;
+    }));
+  }
+  $("#skinOpen").addEventListener("click", () => $("#skinFile").click());
+  $("#skinFile").addEventListener("change", async e => {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    try {
+      const r = await fetch("/api/skins/import", { method: "POST", body: f, headers: {
+        "X-Token": token, "X-Name": encodeURIComponent(f.name), "Content-Type": "application/octet-stream" } });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || r.statusText);
+      renderSkins();
+    } catch (err) { say(err.message); }
+  });
+  let found = { q: "", page: 0 };
+  async function moreSkins() {
+    const box = $("#skinResults"), next = $("#skinMoreResults");
+    next.hidden = true;
+    const wait = el("p", { className: "muted small", textContent: "Searching the Internet Archive…" });
+    box.append(wait);
+    try {
+      const r = await api("/api/skins/search", { q: found.q, page: found.page + 1 });
+      wait.remove();
+      found.page += 1;
+      if (!r.items.length && found.page === 1) box.append(el("p", { className: "muted small", textContent: "Nothing found." }));
+      for (const it of r.items) {
+        const get = el("button", { className: "btn small primary", type: "button", textContent: "Get" });
+        get.addEventListener("click", async () => {
+          get.disabled = true; get.textContent = "Getting…";
+          try { const s = await api("/api/skins/get", { identifier: it.identifier }); get.replaceWith(useButton(s)); renderSkins(); }
+          catch (err) { get.disabled = false; get.textContent = "Get"; say(err.message); }
+        });
+        box.append(el("div", { className: "skin-card" },
+          el("img", { alt: it.title, src: it.thumb, loading: "lazy", width: 180, height: 135 }),
+          el("b", { className: "small", textContent: it.title }), get));
+      }
+      next.hidden = found.page * 24 >= r.total;
+    } catch (err) { wait.textContent = err.message; }
+  }
+  $("#skinSearch").addEventListener("submit", e => {
+    e.preventDefault();
+    found = { q: $("#skinQ").value.trim(), page: 0 };
+    $("#skinResults").replaceChildren();
+    moreSkins();
+  });
+  $("#skinMoreResults").addEventListener("click", moreSkins);
+  if (root.dataset.skin === "winamp") {                  // the last one used: its pictures, with this visit's token
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("mixarchive-winamp")); } catch (e) { /* none */ }
+    const wanted = root.dataset.waId || (saved && saved.id);
+    waName = (saved && saved.id === wanted && saved.name) || "";
+    api("/api/skins").then(r => {
+      const s = r.skins.find(x => x.id === wanted);
+      if (s) useWinamp(s, true); else setSkin("bare");
+    }).catch(() => {});
+  }
   $("#theme").addEventListener("click", () => {
     root.dataset.theme = $("#theme").getAttribute("aria-checked") === "true" ? "light" : "dark";
     remember("mixarchive-theme", root.dataset.theme);
