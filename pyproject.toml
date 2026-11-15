@@ -3,7 +3,7 @@ name = "mixarchive"
 version = "0.2.1"
 description = "Archive YouTube channels and long mixes as tagged tracks, and sync them into rekordbox for CDJ/XDJ"
 readme = "README.md"
-license = "MIT"
+license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"     # pyrekordbox 0.5 and current yt-dlp need 3.11
 keywords = ["youtube", "rekordbox", "dj", "mixes", "tracklists", "yt-dlp", "cdj", "xdj"]
