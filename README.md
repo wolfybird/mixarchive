@@ -92,16 +92,16 @@ it). `mixarchive app` (or `mixarchive-app`) opens it in a window of its own inst
 (pywebview: Edge WebView2 on Windows, WebKit on macOS). The window
 won't close while a command is running - press Stop first.
 
-Both open on **hybrid**. The **Design** menu at the top switches between the designs, and
+Both open on **classic**. The **Design** menu at the top switches between the designs, and
 `--page NAME` opens on another one:
 
 | design | |
 |---|---|
-| `hybrid` (default) | the radio header over the panel body |
+| `classic` (default) | the tabbed page, with skins and a dark switch (below) |
+| `hybrid` | the radio header over the panel body |
 | `radio` | black, thin rules, condensed caps; NOW and NEXT rows under the menu |
 | `panel` | light grey, lowercase; the five steps as hardware-style keys beside a status screen |
 | `music` | dark sidebar, album-style collection cards, the running command in a player bar |
-| `classic` | the original tabbed page, with skins (below) |
 
 Hybrid, radio and panel are built around the pipeline: **1 Add, 2 Update, 3 Sync,
 4 Analyze, 5 USB**, each with a live count, and *Next* points at the first step with work
@@ -115,11 +115,15 @@ anything that writes to rekordbox is disabled while rekordbox is open. While a c
 a progress bar shows the collection, the step and its count, with an estimate of the time
 left once the step reports a count.
 
-The classic page picks a **skin** in its header, kept between runs: **Bare** (the default:
-black and white with one acid accent, light or dark with the system), **Burrow** (wood
-cheeks, candy keys, a small OLED readout), **Field** (grey panel, numbered keys, a green
-LCD) and **Classic** (the original look). `?skin=NAME` in the address overrides it for one
-visit.
+The classic page's header picks a **skin** and **light or dark**, both kept between runs:
+- **Bare** (the default): black and white with one acid accent;
+- **Field**: grey panel, numbered keys, a green LCD; at night a dark body with a backlit
+  LCD;
+- under *more…*: **Burrow** (wood cheeks, candy keys, a small OLED readout; dark only) and
+  **Classic** (the original look).
+
+The **Dark** switch overrides the system's light or dark setting. `?skin=NAME` and
+`?theme=light|dark` in the address override them for one visit.
 
 To start the window with a double-click:
 - **Windows:** `mixarchive-app.exe` starts it without a console window. pipx puts it in
@@ -127,7 +131,7 @@ To start the window with a double-click:
   shortcut to it.
 - **macOS, from a clone:** `./make_mac_app.sh` builds `~/Applications/mixarchive.app`,
   which runs the clone's venv, so code changes need no rebuild (rebuild it if you move the
-  folder). It opens on hybrid; `./make_mac_app.sh radio` picks another design.
+  folder). It opens on classic; `./make_mac_app.sh radio` picks another design.
 
 ## Setup from a clone
 

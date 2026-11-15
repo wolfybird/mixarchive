@@ -5,18 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mixarchive</title>
 <script>
-  // the skin before first paint: ?skin=… (links, tests), else the last one picked, else Bare
+  // skin and light/dark before first paint: ?skin= / ?theme= (links, tests), else the last ones
+  // picked, else Bare and the system's light or dark
   (() => {
-    let skin = new URLSearchParams(location.search).get("skin");
-    try { skin = skin || localStorage.getItem("mixarchive-skin"); } catch (e) { /* storage blocked */ }
+    const q = new URLSearchParams(location.search);
+    let skin = q.get("skin"), theme = q.get("theme");
+    try {
+      skin = skin || localStorage.getItem("mixarchive-skin");
+      theme = theme || localStorage.getItem("mixarchive-theme");
+    } catch (e) { /* storage blocked */ }
     document.documentElement.dataset.skin = ["bare", "burrow", "field", "classic"].includes(skin) ? skin : "bare";
+    if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Inter:wght@400;500;600&family=Inter+Tight:wght@400;600;800&family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:wght@400;700&family=VT323&display=swap">
 <style>
 /* A skin = these tokens, plus a few rules of its own further down ([data-skin=…]).
-   Classic is the plain tokens; offline, the web fonts fall back to the system ones. */
+   Classic is the plain tokens; offline, the web fonts fall back to the system ones.
+   Light or dark: data-theme on <html> when picked with the switch, else the system's. */
 :root {
   --bg: #f6f6f4; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e2e1dc; --row-line: var(--line);
   --accent: #2f5fd0; --accent-ink: #ffffff; --good: #1d7a46; --warn: #a15c00; --bad: #b3261e;
@@ -24,8 +31,13 @@
   --font: system-ui, -apple-system, "Segoe UI", sans-serif; --mono: ui-monospace, Consolas, monospace;
   --radius: 10px; --radius-ctl: 7px; --radius-pill: 99px; --bw: 1px;
 }
+:root[data-theme=dark] {
+  --bg: #141414; --panel: #1d1d1d; --ink: #ecebe6; --muted: #9a9993; --line: #2f2f2d;
+  --accent: #7aa2ff; --accent-ink: #0d1424; --good: #5cc98a; --warn: #f0b05a; --bad: #ff8a80;
+  --chip: #2a2a28; --code: #0b0c0d; --code-ink: #d8dee4;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme=light]) {
     --bg: #141414; --panel: #1d1d1d; --ink: #ecebe6; --muted: #9a9993; --line: #2f2f2d;
     --accent: #7aa2ff; --accent-ink: #0d1424; --good: #5cc98a; --warn: #f0b05a; --bad: #ff8a80;
     --chip: #2a2a28; --code: #0b0c0d; --code-ink: #d8dee4;
@@ -39,6 +51,19 @@ header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; back
 header h1 { font-size: 17px; margin: 0 8px 0 0; letter-spacing: .2px; }
 .skinpick { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
 .skinpick select { width: auto; padding: 3px 6px; }
+.seg { display: inline-flex; border: var(--bw) solid var(--line); border-radius: var(--radius-ctl); overflow: hidden; }
+.seg button { font: inherit; font-size: 12.5px; padding: 4px 11px; border: 0; background: var(--panel); color: var(--ink); cursor: pointer; }
+.seg button + button { border-left: var(--bw) solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); font-weight: 600; }
+.switch { display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 12.5px; color: var(--ink);
+  background: none; border: 0; padding: 4px 2px; cursor: pointer; }
+.switch .track { width: 32px; height: 18px; border-radius: 9px; background: var(--chip); border: var(--bw) solid var(--line);
+  position: relative; flex: none; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--ink); transition: left .12s; }
+.switch[aria-checked="true"] .track::after { left: 16px; }
+.switch:disabled { opacity: .45; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .switch .track::after { transition: none; } }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-pill);
   background: var(--chip); font-size: 12.5px; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
@@ -121,8 +146,13 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   --font: "Inter Tight", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   --radius: 0; --radius-ctl: 0; --radius-pill: 0; --bw: 2px;
 }
+:root[data-skin=bare][data-theme=dark] {
+  --bg: #161616; --panel: #000000; --ink: #f2f2ee; --muted: #b9b9b2; --line: #f2f2ee; --row-line: #3a3a37;
+  --chip: #1f1f1d; --code: #f2f2ee; --code-ink: #000000; --code-line: #000000;
+  --good: #5cd68f; --warn: #f0b05a; --bad: #ff6a55;
+}
 @media (prefers-color-scheme: dark) {
-  :root[data-skin=bare] {
+  :root[data-skin=bare]:not([data-theme=light]) {
     --bg: #161616; --panel: #000000; --ink: #f2f2ee; --muted: #b9b9b2; --line: #f2f2ee; --row-line: #3a3a37;
     --chip: #1f1f1d; --code: #f2f2ee; --code-ink: #000000; --code-line: #000000;
     --good: #5cd68f; --warn: #f0b05a; --bad: #ff6a55;
@@ -193,30 +223,50 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   --chip: #d6d6d1; --code: #c9d3b4; --code-ink: #2b3022; --code-line: #8e9878;
   --font: "Inter", system-ui, sans-serif; --mono: "Space Mono", ui-monospace, Consolas, monospace;
   --radius: 12px; --radius-ctl: 6px; --radius-pill: 6px; --bw: 1px;
+  /* the hardware parts: keys, their shadow, frames, the selected tab, the LCD's bezel, inputs */
+  --key: #f7f7f4; --key-shadow: #9a9a94; --frame: #c4c4bd; --sel: #1c1c1c; --sel-ink: #f7f7f4;
+  --lcd-frame: #a9b394; --well: #d6d6d1; --danger: #1c1c1c; --danger-ink: #f7f7f4; --danger-shadow: #000;
+}
+/* Field at night: dark body, the same orange, a backlit LCD */
+:root[data-skin=field][data-theme=dark] {
+  --bg: #1f1f1d; --panel: #2a2a27; --ink: #ecebe6; --muted: #a7a6a0; --line: #3d3d39; --row-line: #34342f;
+  --accent: #ff6a2b; --accent-ink: #1c1c1c; --good: #5cc98a; --warn: #f0b05a; --bad: #ff7a66;
+  --chip: #34342f; --code: #121a0e; --code-ink: #b8e07a; --code-line: #4d6b2f;
+  --key: #3a3a36; --key-shadow: #0d0d0c; --frame: #3d3d39; --sel: #ecebe6; --sel-ink: #1c1c1c;
+  --lcd-frame: #4d6b2f; --well: #34342f; --danger: #ecebe6; --danger-ink: #1c1c1c; --danger-shadow: #77766f;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin=field]:not([data-theme=light]) {
+    --bg: #1f1f1d; --panel: #2a2a27; --ink: #ecebe6; --muted: #a7a6a0; --line: #3d3d39; --row-line: #34342f;
+    --accent: #ff6a2b; --accent-ink: #1c1c1c; --good: #5cc98a; --warn: #f0b05a; --bad: #ff7a66;
+    --chip: #34342f; --code: #121a0e; --code-ink: #b8e07a; --code-line: #4d6b2f;
+    --key: #3a3a36; --key-shadow: #0d0d0c; --frame: #3d3d39; --sel: #ecebe6; --sel-ink: #1c1c1c;
+    --lcd-frame: #4d6b2f; --well: #34342f; --danger: #ecebe6; --danger-ink: #1c1c1c; --danger-shadow: #77766f;
+  }
 }
 [data-skin=field] header h1, [data-skin=field] nav button, [data-skin=field] button.btn, [data-skin=field] th,
 [data-skin=field] .pill, [data-skin=field] .kind, [data-skin=field] .step .n, [data-skin=field] .stat .l {
   font-family: var(--mono); text-transform: lowercase; }
 [data-skin=field] header h1 { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
-[data-skin=field] .card, [data-skin=field] .step { box-shadow: inset 0 0 0 1px #c4c4bd; border: 0; }
-[data-skin=field] button.btn { background: #f7f7f4; color: var(--ink); border: 0; font-weight: 700; font-size: 11.5px;
-  padding: 8px 12px; box-shadow: 0 3px 0 #9a9a94; }
-[data-skin=field] button.btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #9a9a94; }
+[data-skin=field] .card, [data-skin=field] .step { box-shadow: inset 0 0 0 1px var(--frame); border: 0; }
+[data-skin=field] button.btn { background: var(--key); color: var(--ink); border: 0; font-weight: 700; font-size: 11.5px;
+  padding: 8px 12px; box-shadow: 0 3px 0 var(--key-shadow); }
+[data-skin=field] button.btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--key-shadow); }
 [data-skin=field] button.btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 3px 0 #8e3210; }
-[data-skin=field] button.btn.danger { background: #1c1c1c; color: #f7f7f4; box-shadow: 0 3px 0 #000; }
+[data-skin=field] button.btn.danger { background: var(--danger); color: var(--danger-ink); box-shadow: 0 3px 0 var(--danger-shadow); }
 [data-skin=field] button.btn.armed { background: var(--bad); color: #fff; box-shadow: 0 3px 0 #6a1a0d; }
 [data-skin=field] #console .btn { background: transparent; color: var(--code-ink); box-shadow: inset 0 0 0 1px var(--code-line); }
 [data-skin=field] nav { counter-reset: tab; border-bottom: 0; gap: 6px; }
 [data-skin=field] nav button { border-radius: 6px; border-bottom: 0; font-size: 12px; color: var(--ink); }
 [data-skin=field] nav button::before { counter-increment: tab; content: counter(tab, decimal-leading-zero) " "; color: var(--muted); }
-[data-skin=field] nav button[aria-selected="true"] { background: #1c1c1c; color: #f7f7f4; }
+[data-skin=field] nav button[aria-selected="true"] { background: var(--sel); color: var(--sel-ink); }
 [data-skin=field] nav button[aria-selected="true"]::before { color: var(--accent); }
-[data-skin=field] .stat { background: var(--code); color: var(--code-ink); box-shadow: inset 0 3px 0 rgba(0,0,0,.14), inset 0 0 0 1px #a9b394; }
+[data-skin=field] .stat { background: var(--code); color: var(--code-ink); box-shadow: inset 0 3px 0 rgba(0,0,0,.14), inset 0 0 0 1px var(--lcd-frame); }
 [data-skin=field] .stat .v { font: 700 26px/1.1 var(--mono); letter-spacing: -.04em; }
 [data-skin=field] .stat .l { color: var(--code-ink); font-size: 11px; }
-[data-skin=field] #console { border-top: 1px solid #a9b394; }
+[data-skin=field] #console { border-top: 1px solid var(--lcd-frame); }
 [data-skin=field] #console pre { font-size: 12.5px; }
-[data-skin=field] input[type=text], [data-skin=field] textarea, [data-skin=field] select { background: #d6d6d1; border: 0;
+[data-skin=field] input[type=text], [data-skin=field] textarea, [data-skin=field] select { background: var(--well); border: 0;
   box-shadow: inset 0 2px 0 rgba(0,0,0,.1); }
 
 @media (max-width: 860px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -230,15 +280,12 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   <span class="pill" id="jobPill"><span class="dot"></span><span>idle</span></span>
   <span class="spacer"></span>
   <span class="muted small" id="libRoot"></span>
-  <label class="skinpick">Skin
-    <select id="skin">
-      <option value="bare">Bare</option>
-      <option value="burrow">Burrow</option>
-      <option value="field">Field</option>
-      <option value="classic">Classic</option>
-    </select></label>
+  <span class="skinpick" role="group" aria-label="Skin">Skin
+    <span class="seg"><button type="button" data-skin="bare">Bare</button><button type="button" data-skin="field">Field</button></span>
+    <select id="skinMore" aria-label="More skins"><option value="">more…</option><option value="burrow">Burrow</option><option value="classic">Classic</option></select></span>
+  <button type="button" class="switch" id="theme" role="switch" aria-checked="false"><span class="track" aria-hidden="true"></span>Dark</button>
   <label class="skinpick">Design
-    <select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option><option value="/">classic</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></label>
+    <select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/">classic</option><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></label>
 </header>
 
 <main>
@@ -452,12 +499,31 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     if (field) $(field).focus();
   }
 
-  // ------------------------------------------------------------ skin
-  $("#skin").value = document.documentElement.dataset.skin;
-  $("#skin").addEventListener("change", e => {
-    document.documentElement.dataset.skin = e.target.value;
-    try { localStorage.setItem("mixarchive-skin", e.target.value); } catch (err) { /* kept for this visit only */ }
+  // ------------------------------------------------------------ skin, and light or dark
+  const root = document.documentElement, systemDark = matchMedia("(prefers-color-scheme: dark)");
+  const remember = (key, value) => { try { localStorage.setItem(key, value); } catch (err) { /* this visit only */ } };
+  function showSkin() {
+    for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.skin === root.dataset.skin));
+    $("#skinMore").value = ["burrow", "classic"].includes(root.dataset.skin) ? root.dataset.skin : "";
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : systemDark.matches;
+    $("#theme").setAttribute("aria-checked", String(dark || root.dataset.skin === "burrow"));
+    $("#theme").disabled = root.dataset.skin === "burrow";              // Burrow is dark only
+    $("#theme").title = root.dataset.skin === "burrow" ? "Burrow comes in dark only" : "";
+  }
+  function setSkin(skin) {
+    root.dataset.skin = skin;
+    remember("mixarchive-skin", skin);
+    showSkin();
+  }
+  for (const b of document.querySelectorAll(".seg button")) b.addEventListener("click", () => setSkin(b.dataset.skin));
+  $("#skinMore").addEventListener("change", e => { if (e.target.value) setSkin(e.target.value); });
+  $("#theme").addEventListener("click", () => {
+    root.dataset.theme = $("#theme").getAttribute("aria-checked") === "true" ? "light" : "dark";
+    remember("mixarchive-theme", root.dataset.theme);
+    showSkin();
   });
+  systemDark.addEventListener("change", showSkin);
+  showSkin();
 
   // ------------------------------------------------------------ tabs
   function show(tab) {

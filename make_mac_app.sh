@@ -4,7 +4,7 @@
 # Needs this folder's venv with mixarchive in it: python3 -m venv venv && venv/bin/python -m pip install -e .
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
-PAGE="${1:-/hybrid}"        # start page: /hybrid, /radio, /panel, /music or /
+PAGE="${1:-classic}"        # start design: classic (default), hybrid, radio, panel or music
 APP="$HOME/Applications/mixarchive.app"
 
 mkdir -p "$APP/Contents/MacOS"
