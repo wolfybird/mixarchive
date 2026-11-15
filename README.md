@@ -474,8 +474,11 @@ trouble. have a good set and happy playing. ~rfrank
 
 ## Licence
 
-mixarchive's own code is under the MIT licence (see [LICENSE](LICENSE)). It installs and
-uses other projects under their own licences, notably yt-dlp (Unlicense), deno (MIT),
+mixarchive is free software under the GNU General Public License, version 3 or (at your option)
+any later version (GPL-3.0-or-later, see [LICENSE](LICENSE)). It comes with no warranty.
+Releases up to 0.2.1 were published under the MIT licence.
+
+It installs and uses other projects under their own licences, notably yt-dlp (Unlicense), deno (MIT),
 bgutil-ytdlp-pot-provider (GPL-3.0), pyrekordbox (MIT), mutagen (GPL-2.0-or-later), Pillow
 (MIT-CMU), numpy (BSD-3-Clause), SQLAlchemy (MIT), sqlcipher3 (zlib) and pywebview
 (BSD-3-Clause); none of them is bundled here. The GUI's fonts
