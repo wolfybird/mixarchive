@@ -44,7 +44,7 @@ PICKS = "youtube-picks"      # where `add` puts single videos given no --to
 
 RANK = {"chapters": 4, "description": 3, "track lengths": 3, "comment": 2}
 RENDERABLE = ("auto", "auto-alt", "manual")
-PAGE_HELP = "design to open on: hybrid (default), radio, panel, music or classic (the one with skins)"
+PAGE_HELP = "design to open on: classic (default, with the Bare and Field skins and a dark switch), hybrid, radio, panel or music"
 
 
 def _info(c, vid, force=False):
@@ -1170,12 +1170,12 @@ def main(argv=None):
     p = sub.add_parser("gui", help="open the GUI in the browser (local only)")
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--no-browser", action="store_true", help="just print its address")
-    p.add_argument("--page", default="hybrid", help=PAGE_HELP)
+    p.add_argument("--page", default="classic", help=PAGE_HELP)
     p.set_defaults(fn=cmd_gui)
 
     p = sub.add_parser("app", help="open the GUI in a window of its own (needs pywebview)")
     p.add_argument("--port", type=int, default=8765)
-    p.add_argument("--page", default="hybrid", help=PAGE_HELP)
+    p.add_argument("--page", default="classic", help=PAGE_HELP)
     p.set_defaults(fn=cmd_app)
 
     for stream in (sys.stdout, sys.stderr):     # titles with emoji / math letters on cp1252

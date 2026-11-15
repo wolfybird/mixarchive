@@ -26,7 +26,7 @@ from .util import APP_DIR, NO_WINDOW, console_python, reinstall_hint, rekordbox_
 PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui.html")
 # the GUI's designs (hybrid is the default; "/" is the classic page, which has the skins); they
 # share the /api endpoints, and radio / panel / hybrid share skin.js
-DEFAULT_PAGE = "hybrid"
+DEFAULT_PAGE = "classic"
 PAGE_NAMES = {"hybrid": "/hybrid", "radio": "/radio", "panel": "/panel", "music": "/music", "classic": "/"}
 PAGES = {"/": ("gui.html", "text/html"), "/music": ("gui_music.html", "text/html"),
          "/radio": ("gui_radio.html", "text/html"), "/panel": ("gui_panel.html", "text/html"),
