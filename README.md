@@ -125,22 +125,36 @@ The classic page's header picks a **skin** and **light or dark**, both kept betw
 The **Dark** switch overrides the system's light or dark setting. `?skin=NAME` and
 `?theme=light|dark` in the address override them for one visit.
 
-**Winamp skins:** *more… › Winamp skins…* opens a panel with two ways to add a classic Winamp
-skin (`.wsz`):
-- **Find skins** searches the Internet Archive's collection of over 100,000 of them, most
-  downloaded first. **Get** fetches one.
-- **Open a skin file** adds one you already have.
+**Winamp and Windows Media Player skins:** *more… › Winamp & WMP skins…* opens a panel with
+two ways to add a classic Winamp skin (`.wsz`) or a Windows Media Player skin (`.wmz`):
+- **Find skins** searches the Internet Archive, most downloaded first:
+  - **Winamp**: its collection of over 100,000 of them, one per item. **Get** fetches one.
+  - **Windows Media Player**: the items tagged as WMP skins. Many hold a whole set (one
+    holds 175), so **Open** lists the skins in it, and **Get** fetches one.
+- **Open a skin file** adds one you already have, or a `.zip` holding one.
 
-From a skin, mixarchive takes:
+From a Winamp skin, mixarchive takes:
 - its colours: the playlist's text, background and highlight, and the visualizer's colours
   for the signals;
+- its main window, as the backdrop;
 - its title bar, across the top;
-- its digits, for the numbers;
+- its playlist window's frame, around the cards;
+- its digits, for the numbers and the steps;
+- its play and stop buttons, on the main buttons and Stop;
 - its seek bar, for the progress bar.
 
-Skins are other people's artwork. They're kept in mixarchive's data folder with their readme
-(the author's credits), and nothing in a skin is ever run. Modern (`.wal`) skins aren't
-supported. `?skin=winamp:ID` opens one for a visit.
+From a WMP skin, it takes:
+- its colours: the playlist's and the text's, else its art's;
+- its main picture, as the backdrop, without the colour WMP leaves see-through.
+
+**Backdrop** in the panel shows the skin's art **Tiled** (like an old desktop wallpaper),
+**Big** (one picture) or **Off**.
+
+Skins are other people's artwork. They're kept in mixarchive's data folder with their
+credits (a Winamp skin's readme, a WMP skin's author and copyright), and nothing in a skin is
+ever run: a WMP skin's scripts aren't even kept. Modern (`.wal`) Winamp skins aren't
+supported. `?skin=winamp:ID` or `?skin=wmp:ID` opens one for a visit, and
+`?backdrop=tile|big|off` picks the backdrop.
 
 To start the window with a double-click:
 - **Windows:** `mixarchive-app.exe` starts it without a console window. pipx puts it in

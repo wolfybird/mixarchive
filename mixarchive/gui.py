@@ -187,7 +187,8 @@ def make_server(port=8765):
         def _send(self, code, body, ctype="application/json"):
             data = body if isinstance(body, bytes) else json.dumps(body, ensure_ascii=False).encode()
             self.send_response(code)
-            self.send_header("Content-Type", ctype + "; charset=utf-8")
+            self.send_header("Content-Type", ctype if ctype.startswith("image/") else ctype + "; charset=utf-8")
+            self.send_header("X-Content-Type-Options", "nosniff")     # a skin's pictures are only ever pictures
             self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
@@ -222,12 +223,12 @@ def make_server(port=8765):
                 return self._send(200, journals())
             if url.path == "/api/skins":
                 return self._send(200, {"skins": skins.list_skins()})
-            if url.path.startswith("/skins/"):          # /skins/<id>/<bitmap>.bmp
+            if url.path.startswith("/skins/"):          # /skins/<id>/<picture>: a skin's own images
                 parts = url.path.split("/")
-                path = skins.asset(parts[2], parts[3]) if len(parts) == 4 else None
+                path = skins.asset(parts[2], unquote(parts[3])) if len(parts) == 4 else None
                 if path:
                     with open(path, "rb") as fh:
-                        return self._send(200, fh.read(), "image/bmp")
+                        return self._send(200, fh.read(), skins.asset_type(path))
             self._send(404, {"error": "not found"})
 
         def do_POST(self):
@@ -238,7 +239,7 @@ def make_server(port=8765):
             if length > skins.MAX_SKIN + 1024:
                 return self._send(413, {"error": "too big"})
             raw = self.rfile.read(length)
-            if url.path == "/api/skins/import":          # the body is the .wsz itself
+            if url.path == "/api/skins/import":          # the body is the .wsz / .wmz itself
                 try:
                     return self._send(200, skins.import_bytes(raw, unquote(self.headers.get("X-Name", "skin.wsz"))))
                 except skins.SkinError as e:
@@ -247,12 +248,15 @@ def make_server(port=8765):
                 body = json.loads(raw or b"{}")
             except ValueError:
                 return self._send(400, {"error": "bad json"})
-            if url.path in ("/api/skins/search", "/api/skins/get", "/api/skins/remove"):
+            if url.path in ("/api/skins/search", "/api/skins/files", "/api/skins/get", "/api/skins/remove"):
                 try:
                     if url.path.endswith("search"):
-                        return self._send(200, skins.search(str(body.get("q", "")), int(body.get("page", 1))))
+                        return self._send(200, skins.search(str(body.get("q", "")), int(body.get("page", 1)),
+                                                            kind="wmp" if body.get("kind") == "wmp" else "winamp"))
+                    if url.path.endswith("files"):
+                        return self._send(200, skins.files(str(body.get("identifier", ""))))
                     if url.path.endswith("get"):
-                        return self._send(200, skins.fetch(str(body.get("identifier", ""))))
+                        return self._send(200, skins.fetch(str(body.get("identifier", "")), str(body.get("file") or "") or None))
                     skins.remove(str(body.get("id", "")))
                     return self._send(200, {"ok": True})
                 except skins.SkinError as e:

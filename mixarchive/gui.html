@@ -8,23 +8,26 @@
   // skin and light/dark before first paint: ?skin= / ?theme= (links, tests), else the last ones
   // picked, else Bare and the system's light or dark
   (() => {
-    const q = new URLSearchParams(location.search);
-    let skin = q.get("skin"), theme = q.get("theme");
+    const q = new URLSearchParams(location.search), html = document.documentElement;
+    let skin = q.get("skin"), theme = q.get("theme"), backdrop = q.get("backdrop");
     try {
       skin = skin || localStorage.getItem("mixarchive-skin");
       theme = theme || localStorage.getItem("mixarchive-theme");
+      backdrop = backdrop || localStorage.getItem("mixarchive-backdrop");
     } catch (e) { /* storage blocked */ }
-    if (skin && skin.startsWith("winamp:")) {            // ?skin=winamp:<id>: that skin, for this visit
-      document.documentElement.dataset.waId = skin.slice(7);
-      skin = "winamp";
-    } else if (skin === "winamp") {      // a Winamp skin: its colours now, its pictures once the page runs
+    const picked = /^(winamp|wmp):(.+)$/.exec(skin || "");
+    if (picked) {                                        // ?skin=winamp:<id> / wmp:<id>: that skin, for this visit
+      html.dataset.waId = picked[2];
+      skin = picked[1];
+    } else if (skin === "winamp" || skin === "wmp") {    // an imported skin: its colours now, its pictures once the page runs
       try {
         const saved = JSON.parse(localStorage.getItem("mixarchive-winamp"));
-        for (const [k, v] of Object.entries(saved.tokens)) document.documentElement.style.setProperty(k, v);
+        for (const [k, v] of Object.entries(saved.tokens)) html.style.setProperty(k, v);
       } catch (e) { skin = "bare"; }
     }
-    document.documentElement.dataset.skin = ["bare", "burrow", "field", "classic", "winamp"].includes(skin) ? skin : "bare";
-    if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    html.dataset.skin = ["bare", "burrow", "field", "classic", "winamp", "wmp"].includes(skin) ? skin : "bare";
+    html.dataset.backdrop = ["tile", "big", "off"].includes(backdrop) ? backdrop : "tile";
+    if (theme === "light" || theme === "dark") html.dataset.theme = theme;
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,6 +88,11 @@ header h1 { font-size: 17px; margin: 0 8px 0 0; letter-spacing: .2px; }
 .skin-card img { width: 100%; height: auto; border: var(--bw) solid var(--line); background: var(--chip); }
 .skin-card img.px { image-rendering: pixelated; background: #000; }
 .skin-card pre { white-space: pre-wrap; max-height: 160px; overflow: auto; margin: 4px 0 0; font: 11.5px/1.4 var(--mono); }
+.skin-card img.art { aspect-ratio: 275 / 116; object-fit: contain; }
+.skin-card b { overflow-wrap: anywhere; }
+.skin-card img.thumb { aspect-ratio: 4 / 3; object-fit: contain; }
+.skin-card a { color: inherit; }
+.skin-wide { grid-column: 1 / -1; margin: 0; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-pill);
   background: var(--chip); font-size: 12.5px; white-space: nowrap; }
@@ -291,18 +299,56 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
 [data-skin=field] input[type=text], [data-skin=field] textarea, [data-skin=field] select { background: var(--well); border: 0;
   box-shadow: inset 0 2px 0 rgba(0,0,0,.1); }
 
-/* ---------------------------------------------------------------- Winamp: a classic Winamp skin's
-   own colours (set on <html> by the page from its pledit.txt, viscolor.txt and main.bmp), its title
-   bar across the top, its digits for the numbers, its seek bar for progress */
+/* ---------------------------------------------------------------- imported skins (Winamp, WMP): their
+   own colours, set on <html> by the page, and their art as a backdrop where the page is bare:
+   tiled like an old desktop wallpaper, or one big picture, or none (the skins panel's Backdrop) */
+[data-skin=winamp] body::before, [data-skin=wmp] body::before { content: ""; position: fixed; inset: 0; z-index: -1;
+  pointer-events: none; opacity: var(--sk-alpha, .2); background: var(--sk-art, none) left top / auto repeat; }
+[data-skin=winamp] body::before { image-rendering: pixelated; }
+:root[data-backdrop=big] body::before { background: var(--sk-big, none) center / var(--sk-big-size, contain) no-repeat;
+  opacity: var(--sk-big-alpha, .26); }
+:root[data-backdrop=off] body::before { display: none; }
+[data-skin=winamp] nav, [data-skin=wmp] nav { background: color-mix(in srgb, var(--bg) 78%, transparent); }
+
+/* ---------------------------------------------------------------- Winamp: a classic Winamp skin's colours
+   (from its pledit.txt, viscolor.txt and main.bmp), its title bar across the top, its playlist
+   window's frame around the cards, its digits for the numbers, its play and stop buttons, its seek
+   bar for progress */
 :root[data-skin=winamp] { --radius: 0; --radius-ctl: 0; --radius-pill: 0; --bw: 1px; }
 [data-skin=winamp] header { padding-top: 40px; image-rendering: pixelated;
   background: var(--wa-strip, none) center top / 550px 28px no-repeat,
               var(--wa-strip-fill, none) left top / 2px 28px repeat-x, var(--panel); }
+[data-skin=winamp][data-wa-frame] :is(.card, .step, .dlg-box) { border: 0; padding: 26px 28px 16px 20px;
+  background: var(--wa-pl-tl) left top / 25px 20px no-repeat, var(--wa-pl-tr) right top / 25px 20px no-repeat,
+    var(--wa-pl-top) left top / 25px 20px repeat-x,
+    var(--wa-pl-bl) left bottom / 12px 8px no-repeat, var(--wa-pl-br) right bottom / 20px 8px no-repeat,
+    var(--wa-pl-b) left bottom / 25px 8px repeat-x,
+    var(--wa-pl-l) left top / 12px 29px repeat-y, var(--wa-pl-r) right top / 20px 29px repeat-y, var(--panel); }
+[data-skin=winamp][data-wa-frame] .step { padding: 26px 26px 14px 18px; }
 [data-skin=winamp] .wa-d { display: inline-block; width: 18px; height: 26px; vertical-align: -5px;
   background: var(--wa-numbers) 0 0 / 198px 26px no-repeat; image-rendering: pixelated; }
+[data-skin=winamp] .stat { background: var(--code); color: var(--code-ink); border: 1px solid var(--line); }
+[data-skin=winamp] .stat .l { color: var(--code-ink); opacity: .8; }
+[data-skin=winamp][data-wa-glyphs] main .btn.primary::before, [data-skin=winamp][data-wa-glyphs] #conStop::before {
+  content: ""; display: inline-block; width: 23px; height: 18px; margin: -6px 7px -6px -6px; vertical-align: -4px;
+  background: var(--wa-play) 0 0 / 23px 18px no-repeat; }
+[data-skin=winamp][data-wa-glyphs] #conStop::before { background-image: var(--wa-stop); }
 [data-skin=winamp] #console .cprog { width: 248px; height: 10px; border-radius: 0; image-rendering: pixelated;
   background: var(--wa-posbar, var(--code-line)) 0 0 / 248px 10px no-repeat; }
 [data-skin=winamp] #console .cprog i { background: var(--accent); opacity: .7; border-radius: 0; }
+
+/* ---------------------------------------------------------------- WMP: a Windows Media Player skin's
+   colours (its playlist's and text's, else its art's) and its main picture behind the page; the
+   rounded, glossy look those skins had */
+:root[data-skin=wmp] { --radius: 14px; --radius-ctl: 14px; --radius-pill: 99px; --bw: 1px; }
+[data-skin=wmp] header { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 34%, var(--panel)), var(--panel) 85%); }
+[data-skin=wmp] :is(.card, .step) { box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 12%, transparent) inset, 0 6px 18px rgba(0,0,0,.28); }
+[data-skin=wmp] button.btn { background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 72%, #fff), var(--panel) 60%); }
+[data-skin=wmp] button.btn.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 60%, #fff), var(--accent) 55%); }
+[data-skin=wmp] button.btn.armed { background: var(--bad); }
+[data-skin=wmp] .stat { background: var(--code); color: var(--code-ink); }
+[data-skin=wmp] .stat .l { color: var(--code-ink); opacity: .8; }
+[data-skin=wmp] nav button[aria-selected="true"] { border-bottom-width: 3px; }
 
 @media (max-width: 860px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .flow { grid-template-columns: 1fr; } main { padding: 12px 16px; } header { padding: 10px 16px; } }
@@ -317,7 +363,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   <span class="muted small" id="libRoot"></span>
   <span class="skinpick" role="group" aria-label="Skin">Skin
     <span class="seg"><button type="button" data-skin="bare">Bare</button><button type="button" data-skin="field">Field</button></span>
-    <select id="skinMore" aria-label="More skins"><option value="">more…</option><option value="burrow">Burrow</option><option value="classic">Classic</option><option value="winamp">Winamp skins…</option></select></span>
+    <select id="skinMore" aria-label="More skins"><option value="">more…</option><option value="burrow">Burrow</option><option value="classic">Classic</option><option value="skins">Winamp &amp; WMP skins…</option></select></span>
   <button type="button" class="switch" id="theme" role="switch" aria-checked="false"><span class="track" aria-hidden="true"></span>Dark</button>
   <label class="skinpick">Design
     <select class="design" aria-label="Design" onchange="location.href = this.value + location.search"><option value="/">classic</option><option value="/hybrid">hybrid</option><option value="/radio">radio</option><option value="/panel">panel</option><option value="/music">music app</option></select><script>document.currentScript.previousElementSibling.value = location.pathname</script></label>
@@ -510,21 +556,26 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
 </section>
 <div id="skinsDlg" class="dlg" role="dialog" aria-modal="true" aria-labelledby="skinsTitle" hidden>
   <div class="dlg-box">
-    <div class="dlg-head"><h2 id="skinsTitle">Winamp skins</h2><button class="btn small" type="button" data-close>Close</button></div>
-    <p class="muted small">Classic Winamp skins (.wsz) are other people's artwork from the Winamp community. mixarchive keeps the
-      ones you add in its data folder, with their credits, and takes their colours, title bar, digits and seek bar.
-      Nothing in a skin is ever run.</p>
+    <div class="dlg-head"><h2 id="skinsTitle">Winamp &amp; WMP skins</h2><button class="btn small" type="button" data-close>Close</button></div>
+    <p class="muted small">Classic Winamp skins (.wsz) and Windows Media Player skins (.wmz) are other people's artwork.
+      mixarchive keeps the ones you add in its data folder, with their credits. From a Winamp skin it takes the colours,
+      title bar, playlist frame, digits, buttons and seek bar; from a WMP skin, the colours and the main picture.
+      Nothing in a skin is ever run, and a WMP skin's scripts aren't even kept.</p>
     <h3>Yours</h3>
     <div id="skinList" class="skin-grid"></div>
     <div class="toolbar"><button class="btn" type="button" id="skinOpen">Open a skin file…</button>
-      <input type="file" id="skinFile" accept=".wsz,.zip" hidden></div>
+      <input type="file" id="skinFile" accept=".wsz,.wmz,.zip" hidden>
+      <span class="spacer"></span>
+      <span class="skinpick" role="group" aria-label="Backdrop">Backdrop
+        <span class="seg" id="backdrop"><button type="button" data-backdrop="tile">Tiled</button><button type="button" data-backdrop="big">Big</button><button type="button" data-backdrop="off">Off</button></span></span></div>
     <h3>Find skins</h3>
     <form id="skinSearch" class="toolbar" role="search">
-      <input type="text" id="skinQ" placeholder="neon, chrome, amp…" aria-label="Search Winamp skins" style="max-width: 320px">
+      <span class="seg" id="skinKind" role="group" aria-label="Kind of skin"><button type="button" data-kind="winamp" aria-pressed="true">Winamp</button><button type="button" data-kind="wmp" aria-pressed="false">Windows Media Player</button></span>
+      <input type="text" id="skinQ" placeholder="neon, chrome, amp…" aria-label="Search skins" style="max-width: 320px">
       <button class="btn primary" type="submit">Search</button></form>
     <div id="skinResults" class="skin-grid"></div>
     <div class="toolbar"><button class="btn small" type="button" id="skinMoreResults" hidden>More results</button></div>
-    <p class="muted small">Searches the Internet Archive's Winamp skin collection (archive.org), most downloaded first.</p>
+    <p class="muted small" id="skinWhere">Searches the Internet Archive's Winamp skin collection (archive.org), most downloaded first.</p>
   </div>
 </div>
 <div id="toast" role="alert" hidden></div>
@@ -556,40 +607,61 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   // ------------------------------------------------------------ skin, and light or dark
   const root = document.documentElement, systemDark = matchMedia("(prefers-color-scheme: dark)");
   const remember = (key, value) => { try { localStorage.setItem(key, value); } catch (err) { /* this visit only */ } };
-  let waSet = [], waName = "", waId = "";                 // the CSS variables a Winamp skin put on <html>
+  const IMPORTED = ["winamp", "wmp"];                    // the skins that come from a skin file
+  let waSet = [], waName = "", waId = "", blobs = [];    // what an imported skin put on <html>
   function showSkin() {
-    const s = root.dataset.skin;
-    for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.skin === s));
-    $("#skinMore").value = ["burrow", "classic", "winamp"].includes(s) ? s : "";
-    $("#skinMore").options[3].textContent = s === "winamp" && waName ? `Winamp: ${waName}` : "Winamp skins…";
+    const s = root.dataset.skin, imported = IMPORTED.includes(s);
+    for (const b of $$("header .seg button")) b.setAttribute("aria-pressed", String(b.dataset.skin === s));
+    $("#skinMore").value = ["burrow", "classic"].includes(s) ? s : imported ? "skins" : "";
+    $("#skinMore").querySelector("[value=skins]").textContent =
+      imported && waName ? `${s === "wmp" ? "WMP" : "Winamp"}: ${waName}` : "Winamp & WMP skins…";
     const dark = root.dataset.theme ? root.dataset.theme === "dark" : systemDark.matches;
-    $("#theme").setAttribute("aria-checked", String(s === "burrow" || (s !== "winamp" && dark)));
-    $("#theme").disabled = s === "burrow" || s === "winamp";
-    $("#theme").title = s === "burrow" ? "Burrow comes in dark only" : s === "winamp" ? "a Winamp skin brings its own colours" : "";
+    $("#theme").setAttribute("aria-checked", String(s === "burrow" || (!imported && dark)));
+    $("#theme").disabled = s === "burrow" || imported;
+    $("#theme").title = s === "burrow" ? "Burrow comes in dark only" : imported ? "a Winamp or WMP skin brings its own colours" : "";
+    for (const b of $$("#backdrop button")) b.setAttribute("aria-pressed", String(b.dataset.backdrop === root.dataset.backdrop));
   }
-  function clearWinamp() { for (const k of waSet) root.style.removeProperty(k); waSet = []; waId = ""; }
+  function clearSkin() {
+    for (const k of waSet) root.style.removeProperty(k);
+    for (const u of blobs) URL.revokeObjectURL(u);
+    waSet = []; blobs = []; waId = "";
+    delete root.dataset.waFrame; delete root.dataset.waGlyphs;
+  }
   function setSkin(skin) {
-    clearWinamp();
+    clearSkin();
     root.dataset.skin = skin;
     remember("mixarchive-skin", skin);
     showSkin();
     waDigits();
   }
-  for (const b of document.querySelectorAll(".seg button")) b.addEventListener("click", () => setSkin(b.dataset.skin));
+  for (const b of $$("header .seg button")) b.addEventListener("click", () => setSkin(b.dataset.skin));
   $("#skinMore").addEventListener("change", e => {
-    if (e.target.value === "winamp") { showSkin(); openSkins(); }      // the skin stays until one is picked
+    if (e.target.value === "skins") { showSkin(); openSkins(); }       // the skin stays until one is picked
     else if (e.target.value) setSkin(e.target.value);
   });
+  for (const b of $$("#backdrop button")) b.addEventListener("click", () => {
+    root.dataset.backdrop = b.dataset.backdrop;
+    remember("mixarchive-backdrop", b.dataset.backdrop);
+    showSkin();
+  });
 
-  // ------------------------------------------------------------ Winamp skins
-  const skinFile = (id, name) => `/skins/${encodeURIComponent(id)}/${name}.bmp?t=${encodeURIComponent(token)}`;
+  // ------------------------------------------------------------ Winamp and WMP skins
+  const skinFile = (id, name) => `/skins/${encodeURIComponent(id)}/${encodeURIComponent(name)}?t=${encodeURIComponent(token)}`;
   const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
   const loadImage = src => new Promise((ok, bad) => {
-    const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("its bitmaps didn't load")); i.src = src; });
+    const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("its pictures didn't load")); i.src = src; });
   function crop(img, x, y, w, h) {
     const c = el("canvas", { width: w, height: h });
     c.getContext("2d").drawImage(img, x, y, w, h, 0, 0, w, h);
     return c;
+  }
+  const url = canvas => `url(${canvas.toDataURL()})`;
+  function blobUrl(canvas, list) {        // big pictures: a short URL (not toBlob: it waits for an idle moment)
+    const bin = atob(canvas.toDataURL().split(",")[1]), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const u = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
+    list.push(u);
+    return u;
   }
   const hex = (...v) => "#" + v.map(x => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, "0")).join("");
   const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -598,18 +670,56 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
   const mix = (a, b, t) => { const p = rgb(a), q = rgb(b); return hex(...p.map((v, i) => v + (q[i] - v) * t)); };
   const readable = (fg, bg) => contrast(fg, bg) >= 4.5 ? fg : (lum(bg) > .3 ? "#000000" : "#ffffff");
-  function average(img) {
-    const d = crop(img, 0, 0, img.width, img.height).getContext("2d").getImageData(0, 0, img.width, img.height).data;
+  const pixelsOf = src => (src instanceof HTMLCanvasElement ? src : crop(src, 0, 0, src.width, src.height))
+    .getContext("2d").getImageData(0, 0, src.width, src.height).data;
+  function average(src) {                                 // its average colour, leaving out what's see-through
+    const d = pixelsOf(src);
     let r = 0, g = 0, b = 0, n = 0;
-    for (let i = 0; i < d.length; i += 16) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
-    return hex(r / n, g / n, b / n);
+    for (let i = 0; i < d.length; i += 16) if (d[i + 3] > 127) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+    return n ? hex(r / n, g / n, b / n) : "#202020";
   }
-  function winampTokens(skin, mainAvg) {
-    // the playlist's colours (pledit.txt) lead; the visualizer's (viscolor.txt) give the signals
+  function vivid(src) {                                   // its most common strong colour, for an accent
+    const d = pixelsOf(src), bins = Array.from({ length: 12 }, () => [0, 0, 0, 0]);
+    for (let i = 0; i < d.length; i += 16) {
+      if (d[i + 3] < 128) continue;
+      const r = d[i], g = d[i + 1], b = d[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 510;
+      const s = mx === mn ? 0 : (mx - mn) / 255 / (1 - Math.abs(2 * l - 1));
+      if (s < .45 || l < .2 || l > .8) continue;
+      const h = mx === r ? ((g - b) / (mx - mn) + 6) % 6 : mx === g ? (b - r) / (mx - mn) + 2 : (r - g) / (mx - mn) + 4;
+      const bin = bins[Math.floor(h * 2) % 12];
+      bin[0] += r; bin[1] += g; bin[2] += b; bin[3]++;
+    }
+    const best = bins.reduce((a, x) => x[3] > a[3] ? x : a);
+    return best[3] >= 24 ? hex(best[0] / best[3], best[1] / best[3], best[2] / best[3]) : null;
+  }
+  function keyed(img, keys) {                             // a WMP picture without the colours WMP leaves out of it
+    const c = crop(img, 0, 0, img.width, img.height);
+    if (!keys || !keys.length) return c;
+    const g = c.getContext("2d"), data = g.getImageData(0, 0, c.width, c.height), d = data.data, k = keys.map(rgb);
+    for (let i = 0; i < d.length; i += 4)
+      if (k.some(([r, gr, b]) => Math.abs(d[i] - r) < 7 && Math.abs(d[i + 1] - gr) < 7 && Math.abs(d[i + 2] - b) < 7)) d[i + 3] = 0;
+    g.putImageData(data, 0, 0);
+    return c;
+  }
+  function wallpaper(src, scale) {                        // one tile: the art, scaled, bricked, with room around it
+    const w = Math.round(src.width * scale), h = Math.round(src.height * scale);
+    const gx = Math.round(w * .3), gy = Math.round(h * .4), W = w + gx, H = 2 * (h + gy);
+    const c = el("canvas", { width: W, height: H }), g = c.getContext("2d");
+    g.imageSmoothingEnabled = scale < 1;                  // up: crisp pixels; down: smooth
+    for (const [x, y] of [[gx / 2, gy / 2], [gx / 2 + W / 2, gy / 2 + H / 2], [gx / 2 - W / 2, gy / 2 + H / 2]])
+      g.drawImage(src, Math.round(x), Math.round(y), w, h);
+    return c;
+  }
+  function skinTokens(skin, artAvg, strong) {
+    // the playlist's colours (Winamp: pledit.txt; WMP: its PLAYLIST and TEXT) lead, then its art's;
+    // a Winamp skin's visualizer colours (viscolor.txt) give the signals
     const c = skin.colors || {}, v = skin.vis || [];
-    const bg = c.normalbg || mix(mainAvg, "#000000", .55);
+    const bg = c.normalbg || mix(artAvg, "#000000", .55);
     const ink = readable(c.normal || (lum(bg) > .3 ? "#111111" : "#e8e8e8"), bg);
-    const panel = mix(bg, ink, .07), accent = c.current || v[2] || "#ffc23d", code = v[0] || "#000000";
+    const panel = mix(bg, ink, .07), code = v[0] || "#000000";
+    // the accent fills buttons: the first of these that stands out from the page
+    const accent = [c.current, strong, v[2], "#ffc23d", "#2f5fd0"].find(a => a && contrast(a, bg) >= 1.8 && contrast(a, panel) >= 1.6)
+      || (lum(bg) > .3 ? "#1d1d1b" : "#f2f2ee");
     return {
       "--bg": bg, "--panel": panel, "--ink": ink, "--muted": readable(mix(ink, bg, .3), panel),
       "--line": mix(bg, ink, .32), "--row-line": mix(bg, ink, .16), "--chip": c.selectedbg || mix(bg, ink, .14),
@@ -622,33 +732,68 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   function setVars(vars) {
     for (const [k, v] of Object.entries(vars)) { root.style.setProperty(k, v); if (!waSet.includes(k)) waSet.push(k); }
   }
-  async function useWinamp(skin, quiet) {
+  async function useSkin(skin, quiet) {
     try {
-      const main = await loadImage(skinFile(skin.id, "main"));
-      const tokens = winampTokens(skin, average(main)), art = {};
-      if (skin.bitmaps.includes("titlebar")) {           // its title bar at 2x, a sliver of it fills the width
-        const t = await loadImage(skinFile(skin.id, "titlebar"));
-        art["--wa-strip"] = `url(${crop(t, 27, 0, 275, 14).toDataURL()})`;
-        art["--wa-strip-fill"] = `url(${crop(t, 27 + 40, 0, 1, 14).toDataURL()})`;
+      const kind = skin.kind === "wmp" ? "wmp" : "winamp", images = skin.images || {}, art = {}, fresh = [];
+      const has = b => (skin.bitmaps || []).includes(b), bmp = b => loadImage(skinFile(skin.id, b + ".bmp"));
+      let tokens, frame = false, glyphs = false;
+      if (kind === "winamp") {
+        const main = await bmp("main");
+        tokens = skinTokens(skin, average(main), vivid(main));
+        if (has("titlebar")) {                           // its title bar at 2x, a sliver of it fills the width
+          const t = await bmp("titlebar");
+          art["--wa-strip"] = url(crop(t, 27, 0, 275, 14));
+          art["--wa-strip-fill"] = url(crop(t, 27 + 40, 0, 1, 14));
+        }
+        if (has("posbar")) art["--wa-posbar"] = url(crop(await bmp("posbar"), 0, 0, 248, 10));
+        if (has("numbers")) art["--wa-numbers"] = `url("${skinFile(skin.id, "numbers.bmp")}")`;
+        if (has("pledit")) {                             // its playlist window's frame, for the cards
+          const p = await bmp("pledit");
+          Object.assign(art, {
+            "--wa-pl-tl": url(crop(p, 0, 0, 25, 20)), "--wa-pl-top": url(crop(p, 127, 0, 25, 20)),
+            "--wa-pl-tr": url(crop(p, 153, 0, 25, 20)),
+            "--wa-pl-l": url(crop(p, 0, 42, 12, 29)), "--wa-pl-r": url(crop(p, 31, 42, 20, 29)),
+            "--wa-pl-b": url(crop(p, 179, 30, 25, 8)), "--wa-pl-bl": url(crop(p, 0, 102, 12, 8)),
+            "--wa-pl-br": url(crop(p, 256, 102, 20, 8)),
+          });
+          frame = true;
+        }
+        if (has("cbuttons")) {                           // its play and stop buttons
+          const b = await bmp("cbuttons");
+          art["--wa-play"] = url(crop(b, 23, 0, 23, 18));
+          art["--wa-stop"] = url(crop(b, 69, 0, 23, 18));
+          glyphs = true;
+        }
+        art["--sk-art"] = `url(${blobUrl(wallpaper(main, 2), fresh)})`;
+        art["--sk-big"] = `url("${skinFile(skin.id, "main.bmp")}")`;
+        art["--sk-big-size"] = "cover";
+      } else {
+        const name = images.main, keys = (images.keys || {})[name];
+        const pic = name ? keyed(await loadImage(skinFile(skin.id, name)), keys) : null;
+        tokens = skinTokens(skin, pic ? average(pic) : "#202020", pic ? vivid(pic) : null);
+        if (pic) {
+          art["--sk-art"] = `url(${blobUrl(wallpaper(pic, Math.min(1, 460 / Math.max(pic.width, pic.height))), fresh)})`;
+          art["--sk-big"] = `url(${blobUrl(pic, fresh)})`;
+        }
       }
-      if (skin.bitmaps.includes("posbar"))
-        art["--wa-posbar"] = `url(${crop(await loadImage(skinFile(skin.id, "posbar")), 0, 0, 248, 10).toDataURL()})`;
-      if (skin.bitmaps.includes("numbers")) art["--wa-numbers"] = `url("${skinFile(skin.id, "numbers")}")`;
-      clearWinamp();
-      root.dataset.skin = "winamp";
+      clearSkin();
+      blobs = fresh;
+      root.dataset.skin = kind;
+      if (frame) root.dataset.waFrame = "";
+      if (glyphs) root.dataset.waGlyphs = "";
       setVars({ ...tokens, ...art });
       waName = skin.name; waId = skin.id;
-      remember("mixarchive-skin", "winamp");
-      remember("mixarchive-winamp", JSON.stringify({ id: skin.id, name: skin.name, tokens }));
+      remember("mixarchive-skin", kind);
+      remember("mixarchive-winamp", JSON.stringify({ id: skin.id, name: skin.name, kind, tokens }));
       showSkin();
       waDigits();
     } catch (e) {
-      if (!quiet) say(`couldn't use that skin: ${e.message || e}`);
+      if (quiet) console.warn("couldn't use the last skin:", e); else say(`couldn't use that skin: ${e.message || e}`);
     }
   }
-  function waDigits() {                                   // the stats in the skin's own digits
+  function waDigits() {                                   // the stats and step numbers in the skin's own digits
     const on = root.dataset.skin === "winamp" && waSet.includes("--wa-numbers");
-    for (const v of document.querySelectorAll(".stat .v")) {
+    for (const v of $$(".stat .v, .step .n")) {
       const text = v.dataset.text ?? v.textContent;
       if (!on) { if (v.dataset.text !== undefined) { v.textContent = text; delete v.dataset.text; } continue; }
       if (v.dataset.text === text && v.querySelector(".wa-d")) continue;
@@ -671,8 +816,14 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   $("#skinsDlg").addEventListener("keydown", e => { if (e.key === "Escape") closeSkins(); });
   function useButton(skin) {
     const b = el("button", { className: "btn small primary", type: "button", textContent: "Use" });
-    b.addEventListener("click", () => { useWinamp(skin); closeSkins(); });
+    b.addEventListener("click", () => { useSkin(skin); closeSkins(); });
     return b;
+  }
+  function showPicture(img, s, name) {                    // a WMP skin's picture without its see-through colour
+    const keys = ((s.images || {}).keys || {})[name];
+    if (!keys || !keys.length) { img.src = skinFile(s.id, name); return; }
+    loadImage(skinFile(s.id, name)).then(i => { img.src = keyed(i, keys).toDataURL(); })
+      .catch(() => { img.alt = `${s.name}: its picture didn't load`; });
   }
   async function renderSkins() {
     const list = $("#skinList");
@@ -683,6 +834,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
       return;
     }
     list.replaceChildren(...skins.map(s => {
+      const wmp = s.kind === "wmp", pic = wmp ? (s.images || {}).preview || (s.images || {}).main : "main.bmp";
       const from = s.source && s.source.url
         ? el("a", { href: s.source.url, target: "_blank", rel: "noopener", textContent: "from the Internet Archive" })
         : el("span", { textContent: "from a file" });
@@ -691,11 +843,13 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
         try { await api("/api/skins/remove", { id: s.id }); if (s.id === waId) setSkin("bare"); renderSkins(); }
         catch (e) { say(e.message); }
       });
-      const card = el("div", { className: "skin-card" },
-        el("img", { className: "px", alt: `${s.name}: the main window`, width: 275, height: 116, src: skinFile(s.id, "main") }),
-        el("b", { textContent: s.name }), el("span", { className: "muted small" }, from),
+      const img = el("img", { className: wmp ? "art" : "px", alt: `${s.name}: ${wmp ? "its main picture" : "the main window"}`,
+        width: 275, height: 116 });
+      if (pic) showPicture(img, s, pic);
+      const card = el("div", { className: "skin-card" }, img,
+        el("b", { textContent: s.name }), el("span", { className: "muted small" }, wmp ? "WMP skin, " : "Winamp skin, ", from),
         el("div", { className: "toolbar" }, useButton(s), remove));
-      if (s.readme) card.append(el("details", {}, el("summary", { className: "small", textContent: "Credits (its readme)" }),
+      if (s.readme) card.append(el("details", {}, el("summary", { className: "small", textContent: "Credits" }),
         el("pre", { textContent: s.readme })));
       return card;
     }));
@@ -713,46 +867,82 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
       renderSkins();
     } catch (err) { say(err.message); }
   });
-  let found = { q: "", page: 0 };
+
+  // finding skins: a Winamp item holds one skin; a WMP one is often a whole set, opened to pick from
+  const WHERE = {
+    winamp: "Searches the Internet Archive's Winamp skin collection (archive.org), most downloaded first.",
+    wmp: "Searches the Internet Archive (archive.org) for items tagged as Windows Media Player skins, most downloaded first. Many hold a whole set: open one to pick.",
+  };
+  let kind = "winamp", found = { q: "", page: 0, kind };
+  function showKind() {
+    for (const b of $$("#skinKind button")) b.setAttribute("aria-pressed", String(b.dataset.kind === kind));
+    $("#skinWhere").textContent = WHERE[kind];
+    $("#skinQ").placeholder = kind === "wmp" ? "xbox, mario, plus…" : "neon, chrome, amp…";
+  }
+  for (const b of $$("#skinKind button")) b.addEventListener("click", () => { kind = b.dataset.kind; showKind(); newSearch(); });
+  function getCard(title, thumb, get) {
+    const b = el("button", { className: "btn small primary", type: "button", textContent: "Get" });
+    b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "Getting…";
+      try { const s = await get(); b.replaceWith(useButton(s)); renderSkins(); }
+      catch (err) { b.disabled = false; b.textContent = "Get"; say(err.message); }
+    });
+    return el("div", { className: "skin-card" }, el("img", { className: "thumb", alt: title, src: thumb, loading: "lazy", width: 180, height: 135 }),
+      el("b", { className: "small", textContent: title }), b);
+  }
+  function openCard(it) {
+    const open = el("button", { className: "btn small", type: "button", textContent: "Open" });
+    open.addEventListener("click", () => openItem(it, open));
+    return el("div", { className: "skin-card" }, el("img", { className: "thumb", alt: it.title, src: it.thumb, loading: "lazy", width: 180, height: 135 }),
+      el("b", { className: "small", textContent: it.title }), open);
+  }
+  async function openItem(it, opener) {                   // the skins in one item, to pick from
+    const box = $("#skinResults"), more = $("#skinMoreResults"), kept = [...box.childNodes], moreHidden = more.hidden;
+    const back = el("button", { className: "btn small", type: "button", textContent: "← All results" });
+    const wait = el("p", { className: "muted small skin-wide", textContent: "Looking inside…" });
+    box.replaceChildren(el("div", { className: "toolbar skin-wide" }, back, el("b", { textContent: it.title })), wait);
+    more.hidden = true;
+    back.addEventListener("click", () => { box.replaceChildren(...kept); more.hidden = moreHidden; opener.focus(); });
+    back.focus();
+    try {
+      const r = await api("/api/skins/files", { identifier: it.identifier });
+      const n = r.items.length;
+      wait.textContent = (n ? `${n} skin${n > 1 ? "s" : ""} in it` : "No skin files in it") +
+        (r.too_big ? `; ${r.too_big} more too big to fetch (over 20 MB).` : ".");
+      box.append(...r.items.map(f => getCard(f.title, f.thumb, () => api("/api/skins/get", { identifier: it.identifier, file: f.file }))));
+    } catch (err) { wait.textContent = err.message; }
+  }
   async function moreSkins() {
     const box = $("#skinResults"), next = $("#skinMoreResults");
     next.hidden = true;
-    const wait = el("p", { className: "muted small", textContent: "Searching the Internet Archive…" });
+    const wait = el("p", { className: "muted small skin-wide", textContent: "Searching the Internet Archive…" });
     box.append(wait);
     try {
-      const r = await api("/api/skins/search", { q: found.q, page: found.page + 1 });
+      const r = await api("/api/skins/search", { q: found.q, page: found.page + 1, kind: found.kind });
       wait.remove();
       found.page += 1;
-      if (!r.items.length && found.page === 1) box.append(el("p", { className: "muted small", textContent: "Nothing found." }));
-      for (const it of r.items) {
-        const get = el("button", { className: "btn small primary", type: "button", textContent: "Get" });
-        get.addEventListener("click", async () => {
-          get.disabled = true; get.textContent = "Getting…";
-          try { const s = await api("/api/skins/get", { identifier: it.identifier }); get.replaceWith(useButton(s)); renderSkins(); }
-          catch (err) { get.disabled = false; get.textContent = "Get"; say(err.message); }
-        });
-        box.append(el("div", { className: "skin-card" },
-          el("img", { alt: it.title, src: it.thumb, loading: "lazy", width: 180, height: 135 }),
-          el("b", { className: "small", textContent: it.title }), get));
-      }
+      if (!r.items.length && found.page === 1) box.append(el("p", { className: "muted small skin-wide", textContent: "Nothing found." }));
+      for (const it of r.items)
+        box.append(it.kind === "wmp" ? openCard(it) : getCard(it.title, it.thumb, () => api("/api/skins/get", { identifier: it.identifier })));
       next.hidden = found.page * 24 >= r.total;
     } catch (err) { wait.textContent = err.message; }
   }
-  $("#skinSearch").addEventListener("submit", e => {
-    e.preventDefault();
-    found = { q: $("#skinQ").value.trim(), page: 0 };
+  function newSearch() {
+    found = { q: $("#skinQ").value.trim(), page: 0, kind };
     $("#skinResults").replaceChildren();
     moreSkins();
-  });
+  }
+  $("#skinSearch").addEventListener("submit", e => { e.preventDefault(); newSearch(); });
   $("#skinMoreResults").addEventListener("click", moreSkins);
-  if (root.dataset.skin === "winamp") {                  // the last one used: its pictures, with this visit's token
+  showKind();
+  if (IMPORTED.includes(root.dataset.skin)) {            // the last one used: its pictures, with this visit's token
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem("mixarchive-winamp")); } catch (e) { /* none */ }
     const wanted = root.dataset.waId || (saved && saved.id);
     waName = (saved && saved.id === wanted && saved.name) || "";
     api("/api/skins").then(r => {
       const s = r.skins.find(x => x.id === wanted);
-      if (s) useWinamp(s, true); else setSkin("bare");
+      if (s) useSkin(s, true); else setSkin("bare");
     }).catch(() => {});
   }
   $("#theme").addEventListener("click", () => {
