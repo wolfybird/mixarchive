@@ -96,6 +96,17 @@ header h1 { font-size: 17px; margin: 0 8px 0 0; letter-spacing: .2px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-pill);
   background: var(--chip); font-size: 12.5px; white-space: nowrap; }
+button.pill { font: inherit; font-size: 12.5px; color: inherit; border: 0; cursor: pointer; }
+/* monitor: one block per place, each finding with its level's dot, long lists folded */
+.mon-place { border-top: 1px solid var(--line); padding: 10px 0 6px; }
+.mon-place > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.mon-place > summary .dot { align-self: center; }
+.mon-f { display: grid; grid-template-columns: 8px 1fr; gap: 8px; margin: 8px 0 0 18px; font-size: 13.5px; }
+.mon-f > .dot { margin-top: 6px; }
+.mon-items summary { cursor: pointer; font-size: 12px; margin-top: 2px; }
+.mon-items pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; margin: 4px 0 0;
+  font-size: 12px; background: var(--chip); border-radius: var(--radius-ctl); padding: 8px 10px; }
+#monChanges ul { margin: 4px 0 0; padding-left: 18px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .dot.good { background: var(--good); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
 .spacer { flex: 1; }
@@ -359,6 +370,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   <h1>mixarchive</h1>
   <span class="pill" id="rbPill"><span class="dot"></span><span>rekordbox …</span></span>
   <span class="pill" id="jobPill"><span class="dot"></span><span>idle</span></span>
+  <button type="button" class="pill" id="monPill"><span class="dot"></span><span>copies …</span></button>
   <span class="spacer"></span>
   <span class="muted small" id="libRoot"></span>
   <span class="skinpick" role="group" aria-label="Skin">Skin
@@ -390,6 +402,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     <button role="tab" data-tab="add" aria-selected="false">Add sources</button>
     <button role="tab" data-tab="rekordbox" aria-selected="false">rekordbox</button>
     <button role="tab" data-tab="files" aria-selected="false">Library files</button>
+    <button role="tab" data-tab="monitor" aria-selected="false">Monitor</button>
   </nav>
 
   <section class="panel on" id="tab-collections">
@@ -541,6 +554,21 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
       </div>
     </div>
   </section>
+
+  <section class="panel" id="tab-monitor">
+    <div class="card">
+      <h2>Every copy of the library</h2>
+      <p class="muted small">Compares rekordbox's collection with the files behind it, the backups, every rekordbox stick
+        plugged in (playlists, cues, the decks' play histories) and the stick backups, and says where they disagree. It only reads.</p>
+      <div class="toolbar">
+        <button class="btn primary" data-run='["monitor"]'>Check now</button>
+        <button class="btn" data-run='["monitor","--deep"]' title="reads every stick's cues and every stick backup again, instead of what hasn't changed">Check everything again</button>
+        <span class="muted small" id="monAt"></span>
+      </div>
+      <div id="monChanges"></div>
+      <div id="monPlaces"></div>
+    </div>
+  </section>
 </main>
 
 <section id="console" class="min" aria-label="Command output">
@@ -612,9 +640,14 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   function showSkin() {
     const s = root.dataset.skin, imported = IMPORTED.includes(s);
     for (const b of $$("header .seg button")) b.setAttribute("aria-pressed", String(b.dataset.skin === s));
-    $("#skinMore").value = ["burrow", "classic"].includes(s) ? s : imported ? "skins" : "";
-    $("#skinMore").querySelector("[value=skins]").textContent =
-      imported && waName ? `${s === "wmp" ? "WMP" : "Winamp"}: ${waName}` : "Winamp & WMP skins…";
+    // an imported skin in use gets an entry of its own: shown on "Winamp & WMP skins…", choosing that
+    // entry again changed nothing, so no change event fired and the picker didn't open (issue 14)
+    const menu = $("#skinMore");
+    let current = menu.querySelector("[value=current]");
+    if (imported && !current) menu.querySelector("[value=skins]").before(current = new Option("", "current"));
+    if (!imported && current) current.remove();
+    if (imported) current.textContent = `${s === "wmp" ? "WMP" : "Winamp"}${waName ? ": " + waName : " skin"}`;
+    menu.value = ["burrow", "classic"].includes(s) ? s : imported ? "current" : "";
     const dark = root.dataset.theme ? root.dataset.theme === "dark" : systemDark.matches;
     $("#theme").setAttribute("aria-checked", String(s === "burrow" || (!imported && dark)));
     $("#theme").disabled = s === "burrow" || imported;
@@ -636,8 +669,10 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   }
   for (const b of $$("header .seg button")) b.addEventListener("click", () => setSkin(b.dataset.skin));
   $("#skinMore").addEventListener("change", e => {
-    if (e.target.value === "skins") { showSkin(); openSkins(); }       // the skin stays until one is picked
-    else if (e.target.value) setSkin(e.target.value);
+    const v = e.target.value;
+    if (v === "skins") { showSkin(); openSkins(); }       // the skin stays until one is picked
+    else if (v === "burrow" || v === "classic") setSkin(v);
+    else showSkin();                                      // "more…": the menu goes back to the skin in use
   });
   for (const b of $$("#backdrop button")) b.addEventListener("click", () => {
     root.dataset.backdrop = b.dataset.backdrop;
@@ -959,6 +994,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     $$(".panel").forEach(p => p.classList.toggle("on", p.id === "tab-" + tab));
     history.replaceState(null, "", "#" + tab);
     if (tab === "files") loadJournals();
+    if (tab === "monitor") loadMonitor();
   }
   $$("nav [data-tab]").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
   $$("[data-goto]").forEach(b => b.addEventListener("click", () => show(b.dataset.goto)));
@@ -979,7 +1015,11 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
       try {
         const s = await api("/api/job?from=" + logFrom);
         renderJob(s);
-        if (s.running) poll(); else { loadOverview(); if (["rbsync", "files", "update", "merge"].includes((s.args || [])[0])) setTimeout(loadRb, 800); }
+        if (s.running) poll(); else {
+          loadOverview();
+          if (["rbsync", "files", "update", "merge"].includes((s.args || [])[0])) setTimeout(loadRb, 800);
+          if ((s.args || [])[0] === "monitor") loadMonitor();
+        }
       } catch (e) { poll(); }
     }, 600);
   }
@@ -1226,9 +1266,40 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     } catch (e) { /* the list just stays empty */ }
   }
 
+  // ------------------------------------------------------------ monitor: every copy of the library
+  const LEVEL_DOT = { ok: "good", info: "", warn: "warn", error: "bad" };
+  async function loadMonitor() {
+    try { state.monitor = (await api("/api/monitor")).report; } catch (e) { state.monitor = null; }
+    renderMonitor();
+  }
+  function renderMonitor() {
+    const r = state.monitor, pill = $("#monPill");
+    const todo = r ? r.places.flatMap(p => p.findings).filter(f => f.level === "warn" || f.level === "error") : [];
+    const when = t => new Date(t).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+    pill.querySelector(".dot").className = "dot " + (!r ? "" : todo.some(f => f.level === "error") ? "bad" : todo.length ? "warn" : "good");
+    pill.querySelector("span:last-child").textContent = !r ? "copies: not checked" : todo.length ? `copies: ${todo.length} to look at` : "copies in step";
+    pill.title = r ? "Monitor: last checked " + when(r.at) : "Monitor: compare rekordbox, its files, the backups and the sticks";
+    $("#monAt").textContent = r ? `last checked ${when(r.at)} (took ${Math.round(r.took)} s)` : "not checked yet";
+    $("#monChanges").innerHTML = r && r.previous ? `<div class="note"><b>Since the check before (${esc(when(r.previous))}):</b>
+      ${r.changes.length ? "<ul>" + r.changes.map(c => `<li>${esc(c)}</li>`).join("") + "</ul>" : " nothing changed."}</div>` : "";
+    const items = f => {
+      const total = f.total ?? f.items.length;
+      if (!f.items.length) return "";
+      const label = total > f.items.length ? `first ${num(f.items.length)} of ${num(total)}` : `${num(total)} ${total === 1 ? "item" : "items"}`;
+      return `<details class="mon-items"><summary class="muted">${label}</summary><pre>${esc(f.items.join("\n"))}</pre></details>`;
+    };
+    $("#monPlaces").innerHTML = !r ? "" : r.places.map(p => `
+      <details class="mon-place"${p.level === "warn" || p.level === "error" ? " open" : ""}>
+        <summary><span class="dot ${LEVEL_DOT[p.level]}"></span><b>${esc(p.name)}</b><span class="muted small">${esc(p.summary)}</span></summary>
+        ${p.findings.map(f => `<div class="mon-f"><span class="dot ${LEVEL_DOT[f.level]}" title="${f.level}"></span>
+          <div>${esc(f.text)}${items(f)}</div></div>`).join("")}
+      </details>`).join("");
+  }
+  $("#monPill").addEventListener("click", () => show("monitor"));
+
   // ------------------------------------------------------------ start
-  if (/^#(collections|add|rekordbox|files)$/.test(location.hash)) show(location.hash.slice(1));
-  loadOverview(); loadRb(); poll();
+  if (/^#(collections|add|rekordbox|files|monitor)$/.test(location.hash)) show(location.hash.slice(1));
+  loadOverview(); loadRb(); loadMonitor(); poll();
   setInterval(() => { if (!state.job || !state.job.running) loadOverview(); }, 15000);
 })();
 </script>

@@ -59,10 +59,10 @@ jobs:
           assert pkg not in APP_DIR, "data folder inside the package"
           assert os.path.isfile(s["ytdlp"]), "yt-dlp not found next to Python"
           assert s["rbpython"] == sys.executable
-          for f in ("gui.html", "gui_hybrid.html", "gui_skin.js", "gui_progress.js", "rbdb.py", "rbfiles.py", "rbmerge.py"):
+          for f in ("gui.html", "gui_hybrid.html", "gui_skin.js", "gui_progress.js", "rbdb.py", "rbfiles.py", "rbmerge.py", "rbmonitor.py"):
               assert os.path.isfile(os.path.join(pkg, f)), f + " missing from the package"
           import importlib.util
-          import mutagen, numpy, PIL, pyrekordbox, webview, yt_dlp      # every dependency, no extras
+          import mutagen, numpy, PIL, pyrekordbox, rekfix, webview, yt_dlp      # every dependency, no extras
           assert importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http"), "PO token plugin missing"
           assert os.path.isfile(os.path.join(os.path.dirname(s["ytdlp"]), "deno" + EXE)), "deno missing"
           assert reinstall_hint().endswith("-m pip install mixarchive"), reinstall_hint()   # a plain pip venv

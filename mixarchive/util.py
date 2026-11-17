@@ -114,6 +114,11 @@ DEFAULTS = {
     # robocopy backup of the Pioneer USB stick: tracks rekordbox plays from inside it are
     # flagged by `files audit` (a stick backup isn't a library); "" = none
     "usb_mirror": "",
+    # `monitor`: the folder of stick snapshots (`rekfix snapshot`), and the backups to compare,
+    # each {"name", "from", "to", "skip": [top folders the backup leaves out], "flac": {folder:
+    # the folder `files flaccopy` keeps its FLAC copies in}}, e.g. what backup_library.bat mirrors
+    "stick_snapshots": "",
+    "backups": [],
     "library": os.path.join(APP_DIR, "library.json"),
     "library_root": "",            # where a new library's collections go ("": ~/Music/mixarchive)
 }

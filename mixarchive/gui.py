@@ -33,7 +33,8 @@ PAGES = {"/": ("gui.html", "text/html"), "/music": ("gui_music.html", "text/html
          "/hybrid": ("gui_hybrid.html", "text/html"), "/skin.js": ("gui_skin.js", "text/javascript"),
          "/progress.js": ("gui_progress.js", "text/javascript")}
 COMMANDS = {"add", "update", "run", "resolve", "tracklists", "fetch", "art", "split", "status",
-            "verify", "rbsync", "files", "merge", "list"}
+            "verify", "rbsync", "files", "merge", "list", "monitor"}
+MONITOR_REPORT = os.path.join(APP_DIR, "cache", "monitor", "report.json")    # rbmonitor.py writes it
 REKORDBOX_EXE = (r"C:\Program Files\Pioneer\rekordbox *\rekordbox.exe" if os.name == "nt"
                  else "/Applications/rekordbox */rekordbox.app")
 
@@ -219,6 +220,12 @@ def make_server(port=8765):
                 return self._send(200, rb.state())
             if url.path == "/api/job":
                 return self._send(200, job.state(int((q.get("from") or ["0"])[0])))
+            if url.path == "/api/monitor":           # the last check (`mixarchive monitor` makes a new one)
+                try:
+                    with open(MONITOR_REPORT, encoding="utf-8") as fh:
+                        return self._send(200, {"report": json.load(fh)})
+                except (OSError, ValueError):
+                    return self._send(200, {"report": None})
             if url.path == "/api/journals":
                 return self._send(200, journals())
             if url.path == "/api/skins":
