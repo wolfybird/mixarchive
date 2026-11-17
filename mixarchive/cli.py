@@ -856,6 +856,22 @@ def cmd_files(a):
         raise SystemExit(r.returncode)
 
 
+def cmd_monitor(a):
+    """Keep tabs on every copy of the library: rekordbox, its files, the backups, the sticks and
+    their backups (rbmonitor.py, run with rbvenv's Python like files). `--help` lists its options."""
+    import json
+    import subprocess
+    from .util import APP_DIR, PKG_DIR, require_pyrekordbox, settings
+    require_pyrekordbox()
+    s = settings()
+    cfg = {"state": os.path.join(APP_DIR, "cache", "monitor"), "library": os.path.dirname(library_root()),
+           "usb_mirror": s["usb_mirror"], "stick_snapshots": s["stick_snapshots"], "backups": s["backups"]}
+    r = subprocess.run([s["rbpython"], "-I", os.path.join(PKG_DIR, "rbmonitor.py"), "--config=" + json.dumps(cfg)]
+                       + a.args)
+    if r.returncode:
+        raise SystemExit(r.returncode)
+
+
 def cmd_merge(a):
     """Merge one rekordbox playlist into another (rbmerge.py, run with rbvenv's Python like
     rbsync): copies of the same recording are found by ear, the best stays (WAV first), the
@@ -1155,6 +1171,11 @@ def main(argv=None):
     p.add_argument(jobs[0], **jobs[1])
     p.set_defaults(fn=cmd_update)
 
+    p = sub.add_parser("monitor", help="compare every copy of the library (rekordbox, files, backups, sticks) "
+                       "and say where they disagree", add_help=False)
+    p.add_argument("args", nargs=argparse.REMAINDER, help="--list CODE | --all | --deep | --stick DIR | --last")
+    p.set_defaults(fn=cmd_monitor)
+
     p = sub.add_parser("files", help="check / relocate / move the files behind rekordbox's collection",
                        add_help=False)
     p.add_argument("args", nargs=argparse.REMAINDER, help="status | audit | verify | relocate | move | undo")
@@ -1184,6 +1205,8 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["files"]:      # the rest (incl. --help) belongs to rbfiles.py
         return cmd_files(argparse.Namespace(args=argv[1:]))
+    if argv[:1] == ["monitor"]:    # and rbmonitor.py's
+        return cmd_monitor(argparse.Namespace(args=argv[1:]))
     a = ap.parse_args(argv)
     if a.fn in (cmd_run, cmd_update, cmd_fetch, cmd_art, cmd_split, cmd_verify, cmd_merge) or (
             a.fn is cmd_add and a.run):

@@ -2,5 +2,7 @@
  "ffmpeg": "ffmpeg",
  "ffprobe": "ffprobe",
  "library_root": "",
- "usb_mirror": ""
+ "usb_mirror": "",
+ "stick_snapshots": "",
+ "backups": []
 }

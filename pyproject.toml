@@ -25,6 +25,7 @@ dependencies = [
     "pillow",                       # cover art
     "numpy",                        # files silence, merge
     "pyrekordbox==0.5.0",           # rbsync, files, merge: rekordbox's database
+    "rekfix>=0.2.1",                # monitor: the sticks' databases and cues
     "pywebview>=6",                 # `mixarchive app` / `mixarchive-app`: the window
 ]
 

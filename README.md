@@ -184,6 +184,8 @@ For working on mixarchive itself, or running it from a folder of its own:
    | `rbpython` | `rbvenv\Scripts\python.exe` if there is one, else mixarchive's own Python | the Python with pyrekordbox |
    | `library_root` | `Music\mixarchive` in your home folder | where a new library's collections go |
    | `usb_mirror` | none | a backup copy of your USB stick, if you keep one: `files` flags tracks rekordbox plays from inside it |
+   | `stick_snapshots` | none | the folder you keep stick snapshots in (`rekfix snapshot`), for `monitor` |
+   | `backups` | none | the backups `monitor` compares (see [Keeping tabs](#keeping-tabs-on-every-copy-monitor)) |
    | `openmpt123` | `tools\openmpt\openmpt123.exe` | only for MOD renders |
    | `library` | `library.json` | the list of collections (written by `add` / `init`) |
 
@@ -349,6 +351,7 @@ to the HLS copy of AAC 128k (format 234: same audio as 140, 16 kHz low-pass).
 | `add LINK... [--to NAME] [--label L] [--genre G] [--name N] [--root DIR] [--run]` | add channels / playlists (new collections) or videos (youtube-picks) |
 | `update [NAME...] [--no-rbsync]` | `run` for every collection (or those named), then `rbsync` if rekordbox is closed |
 | `files status \| audit \| verify \| relocate \| move \| flac \| undo \| flaccopy \| silence ...` | the files behind rekordbox's whole collection (below) |
+| `monitor [--list CODE] [--all] [--deep] [--stick DIR] [--last]` | compare every copy of the library (rekordbox, its files, the backups, the sticks) and say where they disagree (below) |
 | `gui [--port N] [--page NAME]` | the browser GUI (design: hybrid, radio, panel, music or classic) |
 | `app [--port N] [--page NAME]` | the same GUI in a window of its own (pywebview) |
 | `list` | known collections |
@@ -487,6 +490,45 @@ carries `WAV - FLAC backup` instead: the same audio as FLAC at about half the si
 refreshed by `files flaccopy` at the start of every backup. To restore a WAV from it:
 `ffmpeg -i "x.flac" -c:a pcm_s16le "x.wav"` - `pcm_s24le` for 24-bit files (ffprobe shows
 `bits_per_raw_sample`); left to its default ffmpeg would write 24-bit audio as 16-bit.
+
+## Keeping tabs on every copy (`monitor`)
+
+A DJ library ends up in several places: rekordbox's collection, the folders behind it,
+backups of those, one or more USB sticks, and copies of the sticks. `mixarchive monitor`
+compares them and says where they disagree, and how. It only reads. In the GUI it's the
+**Monitor** tab (classic page). The **copies** pill in the header shows the last check's
+result: green when everything agrees, otherwise how many findings to look at. Click the pill
+to open the tab.
+
+| place | what it checks |
+|---|---|
+| rekordbox | tracks whose file is missing, or isn't the size rekordbox recorded |
+| each backup | files not copied yet or changed since, WAV / AIFF without their FLAC copy, rekordbox tracks in folders no backup covers, whether the backup drive has room for what's missing |
+| each stick plugged in | its playlists against rekordbox's, cues that differ (set on the decks, or added in rekordbox since the export), the decks' play histories, audio and analysis files missing on the stick, export.pdb against exportLibrary.db, [rekfix](https://github.com/wolfybird/rekfix)'s structure check, and tracks whose audio exists only on the stick |
+| stick backups | what's in `usb_mirror` and each copy under `stick_snapshots`. A deck history that none of them holds is flagged on its stick |
+
+Each check is compared with the one before, so the report ends with what changed since
+then, e.g. a stick's new deck histories. A stick that isn't plugged in is compared with
+when it last was. `--list CODE` prints every item of one finding, e.g.
+`monitor --list stick.cues-deck`. `--stick DIR` checks a folder (a snapshot) as if it were a
+stick. A stick's cues are read again only for the analysis files that changed;
+`--deep` reads everything again.
+
+Backups are set up in `settings.json`. Each one is a folder copied to another, like
+`backup_library.bat` does it:
+
+```json
+"stick_snapshots": "D:\\DJ\\Stick snapshots",
+"backups": [
+  {"name": "Library backup", "from": "D:\\DJ\\Library", "to": "B:\\DJ Backup\\Library",
+   "skip": ["WAV"], "flac": {"WAV": "WAV - FLAC backup"}},
+  {"name": "rekordbox backup", "from": "%APPDATA%\\Pioneer\\rekordbox", "to": "B:\\DJ Backup\\rekordbox"}
+]
+```
+
+`skip` lists top folders the backup leaves out. `flac` names the folder that holds a
+skipped folder's FLAC copies (`files flaccopy`), so those tracks still count as backed up.
+Reports and caches go to `cache\monitor`.
 
 ## MOD renders (tracker collections, opt-in)
 
