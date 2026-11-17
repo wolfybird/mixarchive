@@ -15,6 +15,7 @@
       theme = theme || localStorage.getItem("mixarchive-theme");
       backdrop = backdrop || localStorage.getItem("mixarchive-backdrop");
     } catch (e) { /* storage blocked */ }
+    if (!skin) html.dataset.noSkin = "";                // nothing chosen yet: the default skin, once the page runs
     const picked = /^(winamp|wmp):(.+)$/.exec(skin || "");
     if (picked) {                                        // ?skin=winamp:<id> / wmp:<id>: that skin, for this visit
       html.dataset.waId = picked[2];
@@ -661,6 +662,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     delete root.dataset.waFrame; delete root.dataset.waGlyphs;
   }
   function setSkin(skin) {
+    delete root.dataset.noSkin;
     clearSkin();
     root.dataset.skin = skin;
     remember("mixarchive-skin", skin);
@@ -768,6 +770,7 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     for (const [k, v] of Object.entries(vars)) { root.style.setProperty(k, v); if (!waSet.includes(k)) waSet.push(k); }
   }
   async function useSkin(skin, quiet) {
+    if (!quiet) delete root.dataset.noSkin;
     try {
       const kind = skin.kind === "wmp" ? "wmp" : "winamp", images = skin.images || {}, art = {}, fresh = [];
       const has = b => (skin.bitmaps || []).includes(b), bmp = b => loadImage(skinFile(skin.id, b + ".bmp"));
@@ -862,8 +865,9 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
   }
   async function renderSkins() {
     const list = $("#skinList");
-    let skins;
-    try { skins = (await api("/api/skins")).skins; } catch (e) { list.replaceChildren(e.message); return; }
+    let skins, def = null;
+    try { ({ skins, default: def } = await api("/api/skins")); } catch (e) { list.replaceChildren(e.message); return; }
+    skins = [...skins].sort((a, b) => (b.id === def) - (a.id === def));          // the default first
     if (!skins.length) {
       list.replaceChildren(el("p", { className: "muted small", textContent: "None yet: open a skin file, or find one below." }));
       return;
@@ -882,7 +886,8 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
         width: 275, height: 116 });
       if (pic) showPicture(img, s, pic);
       const card = el("div", { className: "skin-card" }, img,
-        el("b", { textContent: s.name }), el("span", { className: "muted small" }, wmp ? "WMP skin, " : "Winamp skin, ", from),
+        el("b", { textContent: s.name + (s.id === def ? " (default)" : "") }),
+        el("span", { className: "muted small" }, wmp ? "WMP skin, " : "Winamp skin, ", from),
         el("div", { className: "toolbar" }, useButton(s), remove));
       if (s.readme) card.append(el("details", {}, el("summary", { className: "small", textContent: "Credits" }),
         el("pre", { textContent: s.readme })));
@@ -978,6 +983,11 @@ kbd { font: 12px var(--mono); background: var(--chip); padding: 1px 5px; border-
     api("/api/skins").then(r => {
       const s = r.skins.find(x => x.id === wanted);
       if (s) useSkin(s, true); else setSkin("bare");
+    }).catch(() => {});
+  } else if ("noSkin" in root.dataset) {                  // a first visit: mixarchive's default skin
+    api("/api/skins").then(r => {
+      const s = r.default && r.skins.find(x => x.id === r.default);
+      if (s && "noSkin" in root.dataset) { delete root.dataset.noSkin; useSkin(s, true); }
     }).catch(() => {});
   }
   $("#theme").addEventListener("click", () => {

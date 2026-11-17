@@ -59,4 +59,4 @@ build-backend = "setuptools.build_meta"
 packages = ["mixarchive"]
 
 [tool.setuptools.package-data]
-mixarchive = ["gui*.html", "gui_skin.js", "gui_progress.js"]
+mixarchive = ["gui*.html", "gui_skin.js", "gui_progress.js", "*.wsz"]   # *.wsz: the default skin

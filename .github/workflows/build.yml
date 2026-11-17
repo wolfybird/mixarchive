@@ -59,7 +59,8 @@ jobs:
           assert pkg not in APP_DIR, "data folder inside the package"
           assert os.path.isfile(s["ytdlp"]), "yt-dlp not found next to Python"
           assert s["rbpython"] == sys.executable
-          for f in ("gui.html", "gui_hybrid.html", "gui_skin.js", "gui_progress.js", "rbdb.py", "rbfiles.py", "rbmerge.py", "rbmonitor.py"):
+          for f in ("gui.html", "gui_hybrid.html", "gui_skin.js", "gui_progress.js", "rbdb.py", "rbfiles.py", "rbmerge.py", "rbmonitor.py",
+                    "v2_technics_white_resting_by_johnnyg0.wsz"):
               assert os.path.isfile(os.path.join(pkg, f)), f + " missing from the package"
           import importlib.util
           import mutagen, numpy, PIL, pyrekordbox, rekfix, webview, yt_dlp      # every dependency, no extras
