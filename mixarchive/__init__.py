@@ -1,7 +1,7 @@
 """mixarchive - scrape, archive and split long mixes into tagged tracks."""
 import sys
 
-__version__ = "0.2.1"     # = pyproject.toml's; publish.yml checks both
+__version__ = "0.3.0"     # = pyproject.toml's; publish.yml checks both
 
 # pip won't install mixarchive on an older Python (Requires-Python); this catches a clone run
 # with one, e.g. a venv made before 0.2, with what to do instead of an error further in
