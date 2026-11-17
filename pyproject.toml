@@ -24,15 +24,20 @@ dependencies = [
     "mutagen",                      # tags
     "pillow",                       # cover art
     "numpy",                        # files silence, merge
-    "pyrekordbox==0.5.0",           # rbsync, files, merge: rekordbox's database
+    # rbsync, files, merge, monitor: rekordbox's database. Its driver (sqlcipher3-wheels) has
+    # ready-made builds only up to Python 3.14 so far; on 3.15 pip would compile it (minutes, and a
+    # C compiler), so there it's the [rekordbox] extra (util.REKORDBOX_PYTHON has the same bound)
+    "pyrekordbox==0.5.0; python_version < '3.15'",
     "rekfix>=0.2.1",                # monitor: the sticks' databases and cues
     "pywebview>=6",                 # `mixarchive app` / `mixarchive-app`: the window
 ]
 
 [project.optional-dependencies]
-# empty: both are in the base install now; kept so `mixarchive[app,rekordbox]` still installs
+# app: empty, the window is in the base install (kept so `mixarchive[app,rekordbox]` still
+# installs). rekordbox: the same as the base install up to Python 3.14; on 3.15 it brings
+# pyrekordbox, compiling its database driver (see dependencies)
 app = []
-rekordbox = []
+rekordbox = ["pyrekordbox==0.5.0"]
 
 [project.urls]
 Homepage = "https://github.com/wolfybird/mixarchive"
