@@ -378,6 +378,36 @@ def list_skins():
     return sorted(out, key=lambda s: s.get("name", "").lower())
 
 
+# the skin a new install starts with, bundled (with its credits.txt): a Winamp skin by johnnyg0
+DEFAULT_FILE = "v2_technics_white_resting_by_johnnyg0.wsz"
+DEFAULT_SOURCE = {"archive": "winampskin_v2_technics_white_resting_by_johnnyg0", "file": DEFAULT_FILE,
+                  "url": "https://archive.org/details/winampskin_v2_technics_white_resting_by_johnnyg0",
+                  "title": "v2 Technics White Resting by johnnyg0", "bundled": True}
+DEFAULT_MARK = ".default"           # in SKINS_DIR: the default was added once (removing it sticks)
+
+
+def default_skin():
+    """The default skin's description, or None once it has been removed. The first call adds it
+    to the skins folder; one already there from the Internet Archive is used instead."""
+    mark = os.path.join(SKINS_DIR, DEFAULT_MARK)
+    if os.path.exists(mark):
+        with open(mark, encoding="utf-8") as fh:
+            wanted = fh.read().strip()
+        return next((s for s in list_skins() if s.get("id") == wanted), None)
+    have = next((s for s in list_skins()
+                 if (s.get("source") or {}).get("archive") == DEFAULT_SOURCE["archive"]), None)
+    if have is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), DEFAULT_FILE)
+        if not os.path.isfile(path):
+            return None
+        with open(path, "rb") as fh:
+            have = import_bytes(fh.read(), DEFAULT_SOURCE["title"] + ".wsz", DEFAULT_SOURCE)   # its name, readable
+    os.makedirs(SKINS_DIR, exist_ok=True)
+    with open(mark, "w", encoding="utf-8") as fh:
+        fh.write(have["id"])
+    return have
+
+
 def remove(skin_id):
     if not ID.match(skin_id or "") or not os.path.isdir(os.path.join(SKINS_DIR, skin_id)):
         raise SkinError("no such skin")

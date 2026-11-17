@@ -232,5 +232,32 @@ class WmpSkins(unittest.TestCase):
                     skins.fetch("windowsmediaplayerskinscollection", bad)
 
 
+
+class DefaultSkin(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        patcher = mock.patch.object(skins, "SKINS_DIR", os.path.join(self.tmp.name, "skins"))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_bundled_added_once_and_removing_it_sticks(self):
+        first = skins.default_skin()
+        self.assertEqual(first["kind"], "winamp")
+        self.assertEqual(first["source"]["archive"], skins.DEFAULT_SOURCE["archive"])
+        self.assertIn("by johnnyg0", first["readme"])                      # its credits come with it
+        self.assertEqual(len(first["bitmaps"]), 18)
+        self.assertEqual(skins.default_skin()["id"], first["id"])          # not added twice
+        self.assertEqual([s["id"] for s in skins.list_skins()], [first["id"]])
+        skins.remove(first["id"])
+        self.assertIsNone(skins.default_skin())                            # removed stays removed
+        self.assertEqual(skins.list_skins(), [])
+
+    def test_a_copy_from_the_internet_archive_is_used(self):
+        mine = skins.import_bytes(wsz(SKIN), "v2_technics_white_resting_by_johnnyg0.wsz",
+                                  {"archive": skins.DEFAULT_SOURCE["archive"]})
+        self.assertEqual(skins.default_skin()["id"], mine["id"])
+        self.assertEqual(len(skins.list_skins()), 1)
+
 if __name__ == "__main__":
     unittest.main()

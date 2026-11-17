@@ -161,6 +161,13 @@ ever run: a WMP skin's scripts aren't even kept. Modern (`.wal`) Winamp skins ar
 supported. `?skin=winamp:ID` or `?skin=wmp:ID` opens one for a visit, and
 `?backdrop=tile|big|off` picks the backdrop.
 
+**The default skin:** until you pick a skin, mixarchive uses **v2 Technics White Resting**, a Winamp skin by johnnyg0.
+- It comes with mixarchive, from the Internet Archive's
+  [Winamp skin collection](https://archive.org/details/winampskin_v2_technics_white_resting_by_johnnyg0).
+- It is johnnyg0's artwork, not mixarchive's, and isn't covered by mixarchive's licence.
+- It's listed first in the panel. **Remove** takes it out for good, and Bare and the others are a click away.
+- If you made it and want it out of mixarchive, please [open an issue](https://github.com/wolfybird/mixarchive/issues).
+
 To start the window with a double-click:
 - **Windows:** `mixarchive-app.exe` starts it without a console window. pipx puts it in
   `%USERPROFILE%\.local\bin`, a clone in `venv\Scripts`; make a desktop or Start menu

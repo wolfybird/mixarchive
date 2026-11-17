@@ -229,7 +229,11 @@ def make_server(port=8765):
             if url.path == "/api/journals":
                 return self._send(200, journals())
             if url.path == "/api/skins":
-                return self._send(200, {"skins": skins.list_skins()})
+                try:
+                    default = (skins.default_skin() or {}).get("id")
+                except Exception:                   # no default skin, never a broken list
+                    default = None
+                return self._send(200, {"skins": skins.list_skins(), "default": default})
             if url.path.startswith("/skins/"):          # /skins/<id>/<picture>: a skin's own images
                 parts = url.path.split("/")
                 path = skins.asset(parts[2], unquote(parts[3])) if len(parts) == 4 else None
