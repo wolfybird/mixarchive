@@ -184,10 +184,27 @@ def reinstall_hint():
     return f"{q(py)} -m pip install mixarchive"      # installs whatever it's missing
 
 
+# pyrekordbox opens rekordbox's database with sqlcipher3-wheels, which has ready-made builds only up
+# to Python 3.14 so far. From this version on, pip would compile it (minutes, with a C compiler), so
+# a plain install leaves pyrekordbox out there; pyproject.toml has the same bound.
+REKORDBOX_PYTHON = (3, 15)
+
+
+def pyrekordbox_hint(version=None):
+    """How to get pyrekordbox when it's missing (version: this Python's, as (major, minor))."""
+    version = tuple(version or sys.version_info[:2])
+    if version >= REKORDBOX_PYTHON:
+        v = "%d.%d" % version
+        return (f"on Python {v} mixarchive installs without it, as its database driver (sqlcipher3-wheels) has "
+                f"no ready-made build for {v} yet. Use Python 3.14 (pipx install --python 3.14 mixarchive), or "
+                f'build the driver once: "{sys.executable}" -m pip install "mixarchive[rekordbox]" (needs a C '
+                f"compiler - on Windows, Microsoft's C++ Build Tools - and takes several minutes)")
+    return f"it comes with mixarchive; put it back with: {reinstall_hint()}"
+
+
 def require_pyrekordbox():
     if not has_pyrekordbox():
-        raise SystemExit(f"this needs pyrekordbox, which comes with mixarchive; put it back with: "
-                         f"{reinstall_hint()}")
+        raise SystemExit(f"this needs pyrekordbox (rekordbox's database): {pyrekordbox_hint()}")
 
 
 def load_json(path, default=None):

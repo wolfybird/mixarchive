@@ -56,6 +56,11 @@ pipx install --python 3.14 --fetch-python missing mixarchive
 
 (Older pipx versions call that option `--fetch-missing-python`.)
 
+**On Python 3.15**, a plain install leaves out pyrekordbox, which handles rekordbox's database (`rbsync`, `files`, `merge`, `monitor`).
+- **Why:** its database driver, sqlcipher3-wheels, has no ready-made build for 3.15 yet. pip would compile it, which takes several minutes with no output and needs a C compiler (on Windows, Microsoft's C++ Build Tools).
+- **Option 1:** install with Python 3.14 instead: `pipx install --python 3.14 --fetch-python missing mixarchive`.
+- **Option 2:** opt in to the compile: `pipx install "mixarchive[rekordbox]"`. pip keeps the compiled driver, so it compiles only once per driver version.
+
 The newest code that isn't released yet installs from GitHub:
 `pipx install "git+https://github.com/wolfybird/mixarchive"`.
 
